@@ -1,6 +1,6 @@
 /**
- * Signage Basket - Work & Portfolio Engine
- * Contains projects data, category filter logic & interactive lightbox.
+ * Signage Basket - Work & Portfolio Engine (Phase 4 SEO Pass)
+ * Projects data with descriptive location labels, alt texts & interactive lightbox.
  */
 
 window.SIGNAGE_PROJECTS = [
@@ -9,80 +9,90 @@ window.SIGNAGE_PROJECTS = [
     name: "SingFuels",
     category: "Glow Signs",
     categorySlug: "glow-signs",
+    location: "Gandhidham, Gujarat",
     img: "assets/images/work-singfuels.jpg",
-    alt: "SingFuels Illuminated Backlit Logo Sign Board"
+    alt: "LED glow sign board for SingFuels office, made by Signage Basket in Gandhidham, Gujarat"
   },
   {
     id: "shoolin",
     name: "Shoolin Trade Link LLP",
     category: "Glow Signs",
     categorySlug: "glow-signs",
+    location: "Gandhidham, Gujarat",
     img: "assets/images/work-shoolin.jpg",
-    alt: "Shoolin Trade Link 3D Metallic Glow Sign"
+    alt: "3D acrylic letter sign for Shoolin Trade Link LLP in Gandhidham, Gujarat"
   },
   {
     id: "shoolin-board",
     name: "Shoolin Info Board",
     category: "Boards",
     categorySlug: "boards",
+    location: "Gandhidham, Gujarat",
     img: "assets/images/work-shoolin-board.jpg",
-    alt: "Shoolin Directory Acrylic Board"
+    alt: "Acrylic directory office board for Shoolin in Gandhidham, Gujarat"
   },
   {
     id: "core-barbell",
     name: "Core & Barbell Gym",
     category: "Office & Interiors",
     categorySlug: "office-interiors",
+    location: "Kutch, Gujarat",
     img: "assets/images/work-core-barbell.jpg",
-    alt: "Core & Barbell Gym Interior Wall & Glow Sign"
+    alt: "Gym glow sign board and wall logo for Core and Barbell in Kutch, Gujarat"
   },
   {
     id: "mishvik",
     name: "Mishvik Villa A-6",
     category: "Nameplates",
     categorySlug: "nameplates",
+    location: "Gandhidham, Gujarat",
     img: "assets/images/work-mishvik.jpg",
-    alt: "Mishvik Villa Luxury Acrylic Home Nameplate"
+    alt: "Bespoke house name plate design for Mishvik Villa in Gandhidham, Gujarat"
   },
   {
     id: "dedipya",
     name: "Dedipya Sheth & Associates",
     category: "Boards",
     categorySlug: "boards",
+    location: "Gandhidham, Gujarat",
     img: "assets/images/work-dedipya.jpg",
-    alt: "Dedipya Sheth Corporate Acrylic Sign Board"
+    alt: "Corporate acrylic office board for Dedipya Sheth and Associates in Gandhidham, Gujarat"
   },
   {
     id: "integrated",
     name: "Integrated Service Solutions",
     category: "Office & Interiors",
     categorySlug: "office-interiors",
+    location: "Kutch, Gujarat",
     img: "assets/images/work-integrated.jpg",
-    alt: "Integrated Service Solutions Office Branding"
+    alt: "Commercial front-lit signage board for Integrated Service Solutions in Kutch, Gujarat"
   },
   {
     id: "wall-of-fame",
     name: "Wall of Fame Panel",
     category: "Office & Interiors",
     categorySlug: "office-interiors",
+    location: "Gandhidham, Gujarat",
     img: "assets/images/work-wall-of-fame.jpg",
-    alt: "Wall of Fame Acrylic Feature Installation"
+    alt: "Interior wall branding and wall of fame acrylic panel in Gandhidham, Gujarat"
   },
   {
     id: "hermes",
     name: "Hermes Tradex",
     category: "Boards",
     categorySlug: "boards",
+    location: "Gandhidham, Gujarat",
     img: "assets/images/work-hermes.jpg",
-    alt: "Hermes Tradex Professional Office Door Plate"
+    alt: "Acrylic office door plate for Hermes Tradex in Gandhidham, Gujarat"
   },
   {
     id: "elysian",
     name: "The Elysian Facade",
     category: "Glow Signs",
     categorySlug: "glow-signs",
+    location: "Kutch, Gujarat",
     img: "assets/images/work-elysian.jpg",
-    alt: "The Elysian Architectural Facade Glow Sign"
+    alt: "Architectural building facade LED glow sign for The Elysian in Kutch, Gujarat"
   }
 ];
 
@@ -112,14 +122,17 @@ document.addEventListener("DOMContentLoaded", () => {
         card.className = "gallery-card";
         card.setAttribute("tabindex", "0");
         card.setAttribute("role", "button");
-        card.setAttribute("aria-label", `View ${proj.name} project details`);
+        card.setAttribute("aria-label", `View details for ${proj.name} - ${proj.category} in ${proj.location}`);
 
         card.innerHTML = `
           <div class="gallery-card-img-wrapper img-fallback-wrapper" data-title="${proj.name}">
-            <img src="${proj.img}" alt="${proj.alt}" class="project-img" loading="lazy" onerror="this.style.opacity='0';">
+            <img src="${proj.img}" alt="${proj.alt}" class="project-img" width="400" height="360" loading="lazy" decoding="async" onerror="this.style.opacity='0';">
           </div>
           <div class="gallery-card-meta">
-            <h3 class="gallery-card-title">${proj.name}</h3>
+            <div>
+              <h3 class="gallery-card-title">${proj.name}</h3>
+              <div style="font-size: 0.8rem; color: var(--slate); margin-top: 0.2rem;">${proj.location}</div>
+            </div>
             <span class="gallery-card-tag">${proj.category}</span>
           </div>
         `;
@@ -201,7 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
         lightboxImg.src = item.img;
         lightboxImg.alt = item.alt;
       }
-      if (lightboxTitle) lightboxTitle.textContent = item.name;
+      if (lightboxTitle) lightboxTitle.textContent = `${item.name} (${item.location})`;
       if (lightboxType) lightboxType.textContent = item.category;
     }
 
@@ -233,7 +246,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (e.key === "ArrowRight") showNext();
     });
 
-    // Touch Swipe Gesture Support
+    // Touch Swipe Support
     let touchStartX = 0;
     if (lightboxModal) {
       lightboxModal.addEventListener("touchstart", (e) => {
