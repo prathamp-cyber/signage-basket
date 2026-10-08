@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Our Work — Custom Signage Portfolio | Signage Basket Kutch</title>
+  <meta name="description" content="View our portfolio of custom home nameplates, LED glow signs, 3D letters, and interior wall branding installed across Kutch, Gujarat.">
+  <meta name="theme-color" content="#faf8f4">
+
+  <!-- OpenGraph Tags -->
+  <meta property="og:title" content="Our Work Portfolio — Signage Basket Kutch">
+  <meta property="og:description" content="Featured installations of backlit glow signs, 3D letters & residential nameplates in Kutch, Gujarat.">
+  <meta property="og:image" content="assets/images/hero.jpg">
+  <meta property="og:type" content="website">
+
+  <!-- Canonical -->
+  <link rel="canonical" href="https://www.signagebasket.in/our-work.html">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/jpeg" href="assets/images/logo.jpeg">
+  <link rel="apple-touch-icon" href="assets/images/logo.jpeg">
+
+  <!-- Preconnect & Preload -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="preload" as="image" href="assets/images/logo.jpeg">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body id="top">
+
+  <!-- Skip Link -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- Paper Texture Overlay -->
+  <div class="grain-overlay"></div>
+
+  <!-- Shared Header Placeholder -->
+  <div id="siteHeaderContainer"></div>
+
+  <!-- MAIN CONTENT -->
+  <main id="main-content">
+    <!-- 1. PAGE HERO -->
+    <section class="page-hero">
+      <div class="page-hero-inner">
+        <div class="eyebrow hero-fade">Selected Work</div>
+        <h1 class="page-title">
+          <span class="hero-mask-wrapper">
+            <span class="hero-mask-target d-block">Proof, <span class="italic-gold">not promises.</span></span>
+          </span>
+        </h1>
+        <p class="page-subtitle hero-fade">
+          Explore real-world installations of illuminated glow signs, corporate acrylic boards, and bespoke home nameplates delivered throughout Kutch.
+        </p>
+      </div>
+    </section>
+
+    <!-- 2. FILTER BAR -->
+    <div class="work-filter-bar">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="glow-signs">Glow Signs</button>
+      <button class="filter-btn" data-filter="nameplates">Nameplates</button>
+      <button class="filter-btn" data-filter="office-interiors">Office & Interiors</button>
+      <button class="filter-btn" data-filter="boards">Boards</button>
+    </div>
+
+    <!-- 3. MASONRY GALLERY SECTION -->
+    <section class="gallery-grid-section">
+      <div class="gallery-grid" id="galleryGrid">
+        <!-- JS renders gallery dynamically -->
+      </div>
+
+      <!-- NoScript Fallback Grid -->
+      <noscript>
+        <div class="gallery-grid">
+          <article class="gallery-card">
+            <div class="gallery-card-img-wrapper img-fallback-wrapper" data-title="SingFuels">
+              <img src="assets/images/work-singfuels.jpg" alt="SingFuels Backlit Glow Sign" width="400" height="360">
+            </div>
+            <div class="gallery-card-meta">
+              <h3 class="gallery-card-title">SingFuels</h3>
+              <span class="gallery-card-tag">Glow Signs</span>
+            </div>
+          </article>
+          <article class="gallery-card">
+            <div class="gallery-card-img-wrapper img-fallback-wrapper" data-title="Shoolin Trade Link">
+              <img src="assets/images/work-shoolin.jpg" alt="Shoolin 3D Board" width="400" height="360">
+            </div>
+            <div class="gallery-card-meta">
+              <h3 class="gallery-card-title">Shoolin Trade Link</h3>
+              <span class="gallery-card-tag">Glow Signs</span>
+            </div>
+          </article>
+          <article class="gallery-card">
+            <div class="gallery-card-img-wrapper img-fallback-wrapper" data-title="Shoolin Info Board">
+              <img src="assets/images/work-shoolin-board.jpg" alt="Shoolin Info Board" width="400" height="360">
+            </div>
+            <div class="gallery-card-meta">
+              <h3 class="gallery-card-title">Shoolin Info Board</h3>
+              <span class="gallery-card-tag">Boards</span>
+            </div>
+          </article>
+          <article class="gallery-card">
+            <div class="gallery-card-img-wrapper img-fallback-wrapper" data-title="Core & Barbell">
+              <img src="assets/images/work-core-barbell.jpg" alt="Core Barbell Gym Sign" width="400" height="360">
+            </div>
+            <div class="gallery-card-meta">
+              <h3 class="gallery-card-title">Core & Barbell</h3>
+              <span class="gallery-card-tag">Office & Interiors</span>
+            </div>
+          </article>
+        </div>
+      </noscript>
+    </section>
+
+    <!-- 4. LIGHTBOX MODAL -->
+    <div class="lightbox-modal" id="lightboxModal" role="dialog" aria-modal="true" aria-label="Project Detail View">
+      <button class="lightbox-btn lightbox-close" id="lightboxClose" aria-label="Close Lightbox Modal">✕</button>
+      <button class="lightbox-btn lightbox-prev" id="lightboxPrev" aria-label="View Previous Project Image">‹</button>
+      <button class="lightbox-btn lightbox-next" id="lightboxNext" aria-label="View Next Project Image">›</button>
+      <div class="lightbox-content">
+        <div class="lightbox-img-wrapper img-fallback-wrapper">
+          <img src="assets/images/work-singfuels.jpg" alt="" id="lightboxImg" width="800" height="600">
+        </div>
+        <div class="lightbox-caption">
+          <h2 class="lightbox-title" id="lightboxTitle">Project Title</h2>
+          <div class="lightbox-type" id="lightboxType">Category</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. CLOSING CTA (DARK SECTION) -->
+    <section class="cta-section">
+      <div class="img-fallback-wrapper" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:1;" data-title="Signage Basket Portfolio">
+        <img src="assets/images/work-wall-of-fame.jpg" alt="Signage Basket Wall of Fame" class="cta-bg" width="1440" height="600" loading="lazy" decoding="async" onerror="this.style.opacity='0';">
+      </div>
+      <div class="cta-content">
+        <div class="eyebrow" style="margin-bottom: 1.5rem; color: var(--taupe);">Custom Installation</div>
+        <h2 class="cta-title">
+          Want yours on <span class="italic-gold" style="color: var(--paper);">this wall?</span>
+        </h2>
+        <div class="cta-actions">
+          <a href="contact.html" class="btn btn-inverted-primary">
+            <span>Get a Free Quote</span>
+            <span class="btn-arrow">→</span>
+          </a>
+          <a href="https://wa.me/919999999999?text=Hi%20Signage%20Basket,%20I'd%20like%20a%20quote%20for%20a%20nameplate/signage." target="_blank" rel="noopener noreferrer" class="btn btn-inverted-outline">
+            <span>WhatsApp Us</span>
+            <span class="btn-arrow">→</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Shared Footer Placeholder -->
+  <div id="siteFooterContainer"></div>
+
+  <!-- CDN Libraries & Application Scripts loaded at end of body in exact order -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js" defer></script>
+  <script src="js/config.js" defer></script>
+  <script src="js/layout.js" defer></script>
+  <script src="js/main.js" defer></script>
+  <script src="js/work.js" defer></script>
+</body>
+</html>

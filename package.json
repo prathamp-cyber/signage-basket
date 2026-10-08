@@ -1,0 +1,9 @@
+{
+  "name": "signage-basket",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Signage Basket - Custom Nameplates & Glow Signs Studio",
+  "scripts": {
+    "dev": "npx serve ."
+  }
+}
