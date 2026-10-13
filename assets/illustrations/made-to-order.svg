@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Custom made nameplate with ruler and pencil">
+<ellipse cx="256" cy="470" rx="170" ry="14" fill="#cfcac2" opacity=".55"/>
+<rect x="86" y="150" width="340" height="210" rx="20" fill="#b07a4f" stroke="#1c1b1a" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="104" y="168" width="304" height="174" rx="12" fill="none" stroke="#f0e4cf" stroke-width="4"/>
+<rect x="150" y="214" width="212" height="28" rx="14" fill="#f0e4cf"/>
+<rect x="190" y="264" width="132" height="16" rx="8" fill="#f0e4cf" opacity=".8"/>
+<circle cx="122" cy="186" r="9" fill="#e0b95a" stroke="#1c1b1a" stroke-width="4"/>
+<circle cx="390" cy="186" r="9" fill="#e0b95a" stroke="#1c1b1a" stroke-width="4"/>
+<circle cx="122" cy="324" r="9" fill="#e0b95a" stroke="#1c1b1a" stroke-width="4"/>
+<circle cx="390" cy="324" r="9" fill="#e0b95a" stroke="#1c1b1a" stroke-width="4"/>
+<rect x="64" y="392" width="384" height="52" rx="10" fill="#e0b95a" stroke="#1c1b1a" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
+<g stroke="#1c1b1a" stroke-width="5" stroke-linecap="round">
+<path d="M104 392v20M136 392v30M168 392v20M200 392v30M232 392v20M264 392v30M296 392v20M328 392v30M360 392v20M392 392v30M424 392v16"/>
+</g>
+<g transform="translate(350 118) rotate(-38)">
+<rect x="-26" y="0" width="26" height="38" rx="8" fill="#d98a7a" stroke="#1c1b1a" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="0" y="0" width="128" height="38" fill="#8fb3a2" stroke="#1c1b1a" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M128 0 L172 19 L128 38 Z" fill="#f0e4cf" stroke="#1c1b1a" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M158 13 L172 19 L158 25 Z" fill="#1c1b1a"/>
+<path d="M20 11v16M40 11v16" stroke="#1c1b1a" stroke-width="4" stroke-linecap="round"/>
+</g>
+</svg>

@@ -10,16 +10,14 @@
   <meta name="author" content="Signage Basket Studio">
   <meta name="theme-color" content="#ffffff">
 
-  <!-- Geo Tags -->
   <meta name="geo.region" content="IN-GJ">
   <meta name="geo.placename" content="Gandhidham">
   <meta name="geo.position" content="23.0753;70.1337">
   <meta name="ICBM" content="23.0753, 70.1337">
 
-  <!-- OpenGraph Tags -->
   <meta property="og:title" content="Contact Signage Maker in Gandhidham, Gujarat | Signage Basket">
   <meta property="og:description" content="Get a free 3D design preview and price quote for custom nameplates, LED glow signs, and 3D letters in Gandhidham, Kutch, Gujarat.">
-  <meta property="og:image" content="https://www.signagebasket.in/assets/images/hero.jpg">
+  <meta property="og:image" content="https://www.signagebasket.in/logo.jpeg">
   <meta property="og:url" content="https://www.signagebasket.in/contact.html">
   <meta property="og:site_name" content="Signage Basket">
   <meta property="og:locale" content="en_IN">
@@ -27,20 +25,17 @@
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Contact Signage Maker in Gandhidham, Gujarat | Signage Basket">
-  <meta name="twitter:description" content="Get a free 3D design preview & quote for custom nameplates and signboards in Gandhidham, Gujarat.">
-  <meta name="twitter:image" content="https://www.signagebasket.in/assets/images/hero.jpg">
+  <meta name="twitter:description" content="Get a free 3D design preview &amp; quote for custom nameplates and signboards in Gandhidham, Gujarat.">
+  <meta name="twitter:image" content="https://www.signagebasket.in/logo.jpeg">
 
-  <!-- Canonical & Hreflang -->
   <link rel="canonical" href="https://www.signagebasket.in/contact.html">
   <link rel="alternate" hreflang="en-IN" href="https://www.signagebasket.in/contact.html">
   <link rel="alternate" hreflang="x-default" href="https://www.signagebasket.in/contact.html">
 
-  <!-- Web App Manifest & Favicon -->
+  <link rel="icon" type="image/svg+xml" href="assets/logo/favicon.svg">
+  <link rel="apple-touch-icon" href="assets/logo/favicon.svg">
   <link rel="manifest" href="site.webmanifest">
-  <link rel="icon" type="image/jpeg" href="assets/images/logo.jpeg">
-  <link rel="apple-touch-icon" href="assets/images/logo.jpeg">
 
-  <!-- Preconnect & Preload -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
@@ -71,32 +66,23 @@
           "postalCode": "370201",
           "addressCountry": "IN"
         },
-        "geo": {
-          "@type": "GeoCoordinates",
-          "latitude": 23.0753,
-          "longitude": 70.1337
-        },
+        "geo": { "@type": "GeoCoordinates", "latitude": 23.0753, "longitude": 70.1337 },
         "areaServed": ["Gandhidham", "Adipur", "Kandla", "Anjar", "Bhuj", "Mundra", "Bhachau", "Mandvi", "Kutch", "Gujarat", "India"]
       }
     ]
   }
   </script>
 
-  <!-- CSS Stylesheet -->
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body id="top">
 
-  <!-- Skip Link -->
   <a href="#main-content" class="skip-link">Skip to main content</a>
-
-  <!-- Shared Header Placeholder Injected by js/layout.js -->
   <div id="siteHeaderContainer"></div>
 
-  <!-- MAIN CONTENT -->
   <main id="main-content">
-    
-    <!-- 1. BREADCRUMB NAV & PAGE HERO -->
+
+    <!-- PAGE HERO -->
     <section class="page-hero">
       <div class="page-hero-inner">
         <nav class="breadcrumb-nav" aria-label="Breadcrumb">
@@ -106,7 +92,7 @@
           </ol>
         </nav>
         <h1 class="page-title">
-          <span class="keyword-eyebrow">Contact Signage Maker & Get a Free Quote in Gandhidham</span>
+          <span class="keyword-eyebrow">Contact Signage Maker &amp; Get a Free Quote in Gandhidham</span>
           Let's put your name up
         </h1>
         <p class="page-subtitle">
@@ -115,15 +101,15 @@
       </div>
     </section>
 
-    <!-- 2. TWO-COLUMN CONTACT & FORM SECTION -->
+    <!-- FORM + INFO -->
     <section class="section-pad">
       <div class="page-container">
         <div class="contact-grid">
-          
-          <!-- LEFT COLUMN: QUOTE FORM -->
+
+          <!-- QUOTE FORM -->
           <div class="contact-form-col">
             <form id="quoteForm" novalidate aria-label="Signage Quote Form">
-              <!-- Honeypot Field for Spam Protection -->
+              <!-- Honeypot -->
               <input type="text" name="website_hp" style="display:none" tabindex="-1" autocomplete="off">
 
               <div class="form-group" id="groupName">
@@ -168,81 +154,90 @@
                 <textarea id="details" class="form-textarea" placeholder="Describe size (e.g. 12x18 inches), preferred materials (acrylic, brass, LED), or text to be placed on the sign..."></textarea>
               </div>
 
-              <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem;">
+              <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1.5rem;">
                 <em>Note: You can share your logo vector file or site wall photograph on WhatsApp after submitting.</em>
               </p>
 
-              <button type="submit" id="submitBtn" class="btn btn-primary" style="width: 100%;" title="Send Signage Quote Request via WhatsApp">
+              <button type="submit" id="submitBtn" class="btn btn-primary" style="width:100%;" title="Send Signage Quote Request via WhatsApp">
+                <span class="icon i-whatsapp" aria-hidden="true"></span>
                 <span>Send Request via WhatsApp</span>
-                <span class="btn-arrow" aria-hidden="true">→</span>
+                <span class="btn-arrow" aria-hidden="true"><span class="icon i-arrow-right"></span></span>
               </button>
             </form>
 
             <!-- Success State -->
-            <div id="formSuccess" style="display:none; background-color: var(--surface); padding: 2.5rem; text-align: center;">
-              <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: var(--ink);">Thank you for your request!</h3>
-              <p style="color: var(--muted); margin-bottom: 1.5rem;">
+            <div id="formSuccess" style="display:none;background-color:var(--surface);padding:2.5rem;text-align:center;">
+              <h3 style="font-size:1.5rem;margin-bottom:1rem;color:var(--ink);">Thank you for your request!</h3>
+              <p style="color:var(--muted);margin-bottom:1.5rem;">
                 We have prepared your WhatsApp message with your project specifications. If WhatsApp didn't open automatically, click the button below:
               </p>
               <a href="#" id="whatsappDirectLink" target="_blank" rel="noopener" class="btn btn-primary">
+                <span class="icon i-whatsapp" aria-hidden="true"></span>
                 <span>Open WhatsApp Now</span>
-                <span class="btn-arrow" aria-hidden="true">→</span>
+                <span class="btn-arrow" aria-hidden="true"><span class="icon i-arrow-right"></span></span>
               </a>
             </div>
           </div>
 
-          <!-- RIGHT COLUMN: STUDIO INFO PANEL -->
+          <!-- STUDIO INFO PANEL -->
           <div class="contact-info-panel">
             <h2 class="contact-info-title">Studio Information</h2>
-            
-            <div class="contact-details-list">
-              <div>
-                <p><strong>Studio Address</strong></p>
-                <p>Station Road, Gandhidham, Kutch, Gujarat 370201</p>
-              </div>
 
+            <div class="contact-detail-row">
+              <span class="icon i-map-pin" aria-hidden="true"></span>
               <div>
-                <p><strong>Phone & WhatsApp</strong></p>
-                <p><a href="tel:+91XXXXXXXXXX" style="color: var(--ink); font-weight: 500;">+91 XXXXX XXXXX</a></p>
-              </div>
-
-              <div>
-                <p><strong>Email</strong></p>
-                <p><a href="mailto:hello@signagebasket.com" style="color: var(--ink);">hello@signagebasket.com</a></p>
-              </div>
-
-              <div>
-                <p><strong>Working Hours</strong></p>
-                <p>Monday – Saturday: 10:00 AM – 7:00 PM</p>
-                <p style="font-size: 0.85rem; color: var(--muted);">Sunday: By Appointment</p>
-              </div>
-
-              <div>
-                <p><strong>Installation Coverage</strong></p>
-                <p>Gandhidham, Adipur, Kandla, Anjar, Bhuj, Mundra, Mandvi, Bhachau, Kutch & all of Gujarat.</p>
-              </div>
-
-              <div>
-                <p><strong>What Happens Next?</strong></p>
-                <p style="font-size: 0.9rem; color: var(--muted); line-height: 1.6;">
-                  1. We review your dimensions and text.<br>
-                  2. We create a free 3D digital design preview.<br>
-                  3. You approve the preview and material choice.<br>
-                  4. We fabricate and install or dispatch!
-                </p>
+                <strong>Studio Address</strong>
+                Station Road, Gandhidham, Kutch, Gujarat 370201
               </div>
             </div>
 
-            <!-- Google Maps Embed -->
+            <div class="contact-detail-row">
+              <span class="icon i-phone" aria-hidden="true"></span>
+              <div>
+                <strong>Phone &amp; WhatsApp</strong>
+                <a href="tel:+91XXXXXXXXXX" style="color:var(--ink);font-weight:500;">+91 XXXXX XXXXX</a>
+              </div>
+            </div>
+
+            <div class="contact-detail-row">
+              <span class="icon i-mail" aria-hidden="true"></span>
+              <div>
+                <strong>Email</strong>
+                <a href="mailto:hello@signagebasket.com" style="color:var(--ink);">hello@signagebasket.com</a>
+              </div>
+            </div>
+
+            <div class="contact-detail-row">
+              <span class="icon i-clock" aria-hidden="true"></span>
+              <div>
+                <strong>Working Hours</strong>
+                Monday – Saturday: 10:00 AM – 7:00 PM
+                <p style="font-size:0.85rem;color:var(--muted);margin-top:0.15rem;">Sunday: By Appointment</p>
+              </div>
+            </div>
+
+            <div class="contact-detail-row">
+              <span class="icon i-whatsapp" aria-hidden="true"></span>
+              <div>
+                <strong>What Happens Next?</strong>
+                <ol style="font-size:0.9rem;color:var(--muted);line-height:1.7;margin-left:1rem;margin-top:0.25rem;">
+                  <li>We review your dimensions and text.</li>
+                  <li>We create a free 3D digital design preview.</li>
+                  <li>You approve the preview and material choice.</li>
+                  <li>We fabricate and install or dispatch!</li>
+                </ol>
+              </div>
+            </div>
+
+            <!-- Google Maps -->
             <div class="contact-map-frame">
-              <iframe 
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d117565.3409748386!2d70.06380612140407!3d23.075303698884976!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3950bce00e471d87%3A0xe21f7b05596e1ec7!2sGandhidham%2C%20Gujarat!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin" 
-                title="Signage Basket Location Map in Gandhidham, Gujarat" 
-                loading="lazy" 
+              <iframe
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d117565.3409748386!2d70.06380612140407!3d23.075303698884976!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3950bce00e471d87%3A0xe21f7b05596e1ec7!2sGandhidham%2C%20Gujarat!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin"
+                title="Signage Basket Location Map in Gandhidham, Gujarat"
+                loading="lazy"
                 referrerpolicy="no-referrer-when-downgrade">
               </iframe>
             </div>
-
           </div>
 
         </div>
@@ -251,114 +246,135 @@
 
   </main>
 
-  <!-- Shared Footer Placeholder Injected by js/layout.js -->
   <div id="siteFooterContainer"></div>
 
-  <!-- Form Validation & Dispatch Script -->
+  <!-- Form Validation & Dispatch -->
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      // Check query parameter ?type= to pre-select dropdown
-      const urlParams = new URLSearchParams(window.location.search);
-      const typeParam = urlParams.get("type");
-      const serviceSelect = document.getElementById("serviceType");
+  document.addEventListener("DOMContentLoaded", () => {
+    // Prefill from query params
+    const urlParams = new URLSearchParams(window.location.search);
+    const designSlug = urlParams.get("design");
+    const material   = urlParams.get("material");
+    const space      = urlParams.get("space");
+    const type       = urlParams.get("type");
+    const serviceSelect = document.getElementById("serviceType");
+    const detailsField  = document.getElementById("details");
 
-      if (typeParam && serviceSelect) {
-        const paramMap = {
-          "home-nameplates": "Home Nameplate",
-          "glow-signs": "LED / Glow Sign",
-          "3d-letters": "3D Letter Sign",
-          "office-boards": "Acrylic Office Board",
-          "wall-branding": "Interior Wall Branding"
-        };
-        if (paramMap[typeParam]) {
-          serviceSelect.value = paramMap[typeParam];
+    if (type && serviceSelect) {
+      const paramMap = {
+        "home-nameplates": "Home Nameplate",
+        "glow-signs":      "LED / Glow Sign",
+        "3d-letters":      "3D Letter Sign",
+        "office-boards":   "Acrylic Office Board",
+        "wall-branding":   "Interior Wall Branding"
+      };
+      if (paramMap[type]) serviceSelect.value = paramMap[type];
+    }
+
+    if (designSlug && detailsField) {
+      const catalog = window.SIGNAGE_PRODUCTS || [];
+      const item = catalog.find((p) => p.slug === designSlug);
+      const designName = item ? item.name : decodeURIComponent(designSlug.replace(/-/g, " "));
+      let prefill = `Inquiry regarding "${designName}". Please share details and free 3D design preview.`;
+      if (material) prefill += ` Preferred material: ${material}.`;
+      if (space)    prefill += ` Space type: ${space}.`;
+      detailsField.value = prefill;
+      if (item && item.category && serviceSelect) {
+        for (let i = 0; i < serviceSelect.options.length; i++) {
+          if (serviceSelect.options[i].text.toLowerCase().includes(item.category.toLowerCase())) {
+            serviceSelect.selectedIndex = i; break;
+          }
         }
       }
+    } else if ((material || space) && detailsField && !detailsField.value) {
+      let parts = [];
+      if (material) parts.push(`Material preference: ${material}`);
+      if (space)    parts.push(`Space: ${space}`);
+      detailsField.value = parts.join(", ") + ". Please share a free design preview.";
+    }
 
-      const quoteForm = document.getElementById("quoteForm");
-      const formSuccess = document.getElementById("formSuccess");
-      const directLink = document.getElementById("whatsappDirectLink");
+    // Form submission
+    const quoteForm   = document.getElementById("quoteForm");
+    const formSuccess = document.getElementById("formSuccess");
+    const directLink  = document.getElementById("whatsappDirectLink");
 
-      if (quoteForm) {
-        quoteForm.addEventListener("submit", (e) => {
-          e.preventDefault();
+    if (quoteForm) {
+      quoteForm.addEventListener("submit", (e) => {
+        e.preventDefault();
 
-          const hp = quoteForm.querySelector("input[name='website_hp']");
-          if (hp && hp.value) return;
+        const hp = quoteForm.querySelector("input[name='website_hp']");
+        if (hp && hp.value) return;
 
-          let isValid = true;
-          const nameInput = document.getElementById("fullName");
-          const phoneInput = document.getElementById("phoneNum");
-          const emailInput = document.getElementById("emailAddr");
-          const serviceInput = document.getElementById("serviceType");
-          const locationInput = document.getElementById("location");
-          const detailsInput = document.getElementById("details");
+        let isValid = true;
+        const nameInput     = document.getElementById("fullName");
+        const phoneInput    = document.getElementById("phoneNum");
+        const emailInput    = document.getElementById("emailAddr");
+        const serviceInput  = document.getElementById("serviceType");
+        const locationInput = document.getElementById("location");
+        const detailsInput  = document.getElementById("details");
 
-          document.querySelectorAll(".form-group").forEach(g => {
-            const err = g.querySelector(".field-error-msg");
-            if (err) err.style.display = "none";
-          });
-
-          if (!nameInput.value.trim()) {
-            document.querySelector("#groupName .field-error-msg").style.display = "block";
-            isValid = false;
-          }
-
-          const phoneClean = phoneInput.value.replace(/\D/g, "");
-          if (phoneClean.length < 10) {
-            document.querySelector("#groupPhone .field-error-msg").style.display = "block";
-            isValid = false;
-          }
-
-          if (emailInput.value.trim()) {
-            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailPattern.test(emailInput.value.trim())) {
-              document.querySelector("#groupEmail .field-error-msg").style.display = "block";
-              isValid = false;
-            }
-          }
-
-          if (!serviceInput.value) {
-            document.querySelector("#groupService .field-error-msg").style.display = "block";
-            isValid = false;
-          }
-
-          if (!isValid) return;
-
-          const config = window.SIGNAGE_CONFIG || {};
-          const waNum = config.whatsappRaw || "919999999999";
-
-          const msgLines = [
-            `*New Signage Quote Request*`,
-            `• *Name:* ${nameInput.value.trim()}`,
-            `• *Phone:* ${phoneInput.value.trim()}`,
-            emailInput.value.trim() ? `• *Email:* ${emailInput.value.trim()}` : null,
-            `• *Product Needed:* ${serviceInput.value}`,
-            locationInput.value.trim() ? `• *Location:* ${locationInput.value.trim()}` : null,
-            detailsInput.value.trim() ? `• *Details:* ${detailsInput.value.trim()}` : null
-          ].filter(Boolean);
-
-          const fullMsg = encodeURIComponent(msgLines.join("\n"));
-          const waUrl = `https://wa.me/${waNum}?text=${fullMsg}`;
-
-          if (directLink) directLink.href = waUrl;
-          window.open(waUrl, "_blank");
-
-          quoteForm.style.display = "none";
-          if (formSuccess) formSuccess.style.display = "block";
+        document.querySelectorAll(".form-group").forEach((g) => {
+          const err = g.querySelector(".field-error-msg");
+          if (err) err.style.display = "none";
         });
-      }
-    });
+
+        if (!nameInput.value.trim()) {
+          document.querySelector("#groupName .field-error-msg").style.display = "block";
+          isValid = false;
+        }
+
+        const phoneClean = phoneInput.value.replace(/\D/g, "");
+        if (phoneClean.length < 10) {
+          document.querySelector("#groupPhone .field-error-msg").style.display = "block";
+          isValid = false;
+        }
+
+        if (emailInput.value.trim()) {
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.value.trim())) {
+            document.querySelector("#groupEmail .field-error-msg").style.display = "block";
+            isValid = false;
+          }
+        }
+
+        if (!serviceInput.value) {
+          document.querySelector("#groupService .field-error-msg").style.display = "block";
+          isValid = false;
+        }
+
+        if (!isValid) return;
+
+        const config = window.SIGNAGE_CONFIG || {};
+        const waNum  = config.whatsappRaw || "919999999999";
+
+        const msgLines = [
+          `*New Signage Quote Request*`,
+          `• *Name:* ${nameInput.value.trim()}`,
+          `• *Phone:* ${phoneInput.value.trim()}`,
+          emailInput.value.trim()    ? `• *Email:* ${emailInput.value.trim()}`       : null,
+          `• *Product Needed:* ${serviceInput.value}`,
+          locationInput.value.trim() ? `• *Location:* ${locationInput.value.trim()}` : null,
+          detailsInput.value.trim()  ? `• *Details:* ${detailsInput.value.trim()}`   : null
+        ].filter(Boolean);
+
+        const waUrl = `https://wa.me/${waNum}?text=${encodeURIComponent(msgLines.join("\n"))}`;
+
+        if (directLink) directLink.href = waUrl;
+        window.open(waUrl, "_blank");
+
+        quoteForm.style.display = "none";
+        if (formSuccess) formSuccess.style.display = "block";
+      });
+    }
+  });
   </script>
 
-  <!-- CDN Libraries: GSAP, ScrollTrigger, Lenis -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.29/bundled/lenis.min.js"></script>
 
-  <!-- Site Logic Scripts -->
   <script src="js/config.js"></script>
   <script src="js/products.js"></script>
+  <script src="js/search.js"></script>
   <script src="js/layout.js"></script>
   <script src="js/main.js"></script>
 </body>
