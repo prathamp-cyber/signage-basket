@@ -215,7 +215,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (stripItem) {
         const img = stripItem.querySelector("img");
         if (img) {
-          const allStrip = Array.from(document.querySelectorAll(".strip-item img"));
+          const allStrip = Array.from(document.querySelectorAll("#installationsStrip .strip-item img"));
           const images   = allStrip.map(i => ({ src: i.src, title: i.alt }));
           openLightbox(img.src, img.alt, allStrip.indexOf(img), images);
         }
@@ -246,6 +246,7 @@ document.addEventListener("DOMContentLoaded", () => {
     clearTimeout(failsafeTimer);
     forceRestoreVisibility("Reduced motion or missing libraries");
     initImageFallbackHandlers();
+    window.checkRecentInstallations && window.checkRecentInstallations();
     return;
   }
 
@@ -307,14 +308,43 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   initImageFallbackHandlers();
+  if (window.checkRecentInstallations) {
+    window.checkRecentInstallations();
+    setTimeout(window.checkRecentInstallations, 300);
+    setTimeout(window.checkRecentInstallations, 1000);
+  }
 });
+
+// Global helpers for graceful fallback & real-work sections
+window.handleSampleImgError = function(img, name) {
+  if (!img || img.dataset.fallbackApplied) return;
+  img.dataset.fallbackApplied = "true";
+  img.style.display = "none";
+  const parent = img.parentElement;
+  if (parent && !parent.querySelector(".img-fallback-surface")) {
+    const fallback = document.createElement("div");
+    fallback.className = "img-fallback-surface";
+    fallback.textContent = name || img.alt || "Signage Basket";
+    parent.appendChild(fallback);
+  }
+};
+
+window.checkRecentInstallations = function() {
+  const section = document.querySelector(".installations-strip-section");
+  const strip = document.getElementById("installationsStrip");
+  if (!section || !strip) return;
+  const items = strip.querySelectorAll(".strip-item");
+  if (items.length < 3) {
+    section.style.display = "none";
+  }
+};
 
 function initImageFallbackHandlers() {
   document.querySelectorAll("img").forEach((img) => {
+    if (img.closest(".strip-item, .gallery-card, .work-card")) return;
     img.addEventListener("error", function () {
-      this.style.opacity = "0";
-      const parent = this.closest(".product-img-wrap, .collection-img-wrap, .work-img-frame, .strip-item") || this.parentElement;
-      if (parent) parent.style.backgroundColor = "var(--surface-2)";
+      window.handleSampleImgError(this, this.alt);
     });
   });
 }
+

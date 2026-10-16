@@ -112,45 +112,96 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let activeFilter = "all";
     let currentIndex = 0;
-    let filteredProjects = [...window.SIGNAGE_PROJECTS];
+    const failedProjectIds = new Set();
+
+    function checkGalleryEmpty() {
+      const cards = galleryGrid.querySelectorAll(".gallery-card");
+      let emptyMsg = galleryGrid.querySelector(".work-empty-state");
+      if (cards.length === 0) {
+        if (!emptyMsg) {
+          const cfg = window.SIGNAGE_CONFIG || {};
+          const waNum = cfg.whatsappRaw || "919999999999";
+          const waMsg = encodeURIComponent(cfg.whatsappDefaultMsg || "Hi Signage Basket, I'd like to see your recent work photos.");
+          const waUrl = `https://wa.me/${waNum}?text=${waMsg}`;
+
+          emptyMsg = document.createElement("div");
+          emptyMsg.className = "work-empty-state";
+          emptyMsg.innerHTML = `
+            <p>Project photos are being added. Message us on WhatsApp to see our recent work.</p>
+            <a href="${waUrl}" target="_blank" rel="noopener" class="btn btn-primary" title="Message on WhatsApp">
+              <span class="icon i-whatsapp" aria-hidden="true"></span>
+              <span>Message on WhatsApp</span>
+              <span class="btn-arrow" aria-hidden="true"><span class="icon i-arrow-right"></span></span>
+            </a>
+          `;
+          galleryGrid.appendChild(emptyMsg);
+        }
+      } else {
+        if (emptyMsg) emptyMsg.remove();
+      }
+    }
+    window.handleWorkCardRemoved = checkGalleryEmpty;
+
+    function getValidProjects(filter) {
+      return (window.SIGNAGE_PROJECTS || []).filter((p) => {
+        if (failedProjectIds.has(p.id)) return false;
+        if (filter === "all") return true;
+        return p.categorySlug === filter || p.category.toLowerCase().includes(filter);
+      });
+    }
 
     // Render Gallery Items
     function renderGallery(projects) {
       galleryGrid.innerHTML = "";
-      projects.forEach((proj, idx) => {
+      if (projects.length === 0) {
+        checkGalleryEmpty();
+        return;
+      }
+
+      projects.forEach((proj) => {
         const card = document.createElement("article");
         card.className = "gallery-card";
         card.setAttribute("tabindex", "0");
         card.setAttribute("role", "button");
+        card.setAttribute("data-proj-id", proj.id);
         card.setAttribute("aria-label", `View details for ${proj.name} - ${proj.category} in ${proj.location}`);
 
         card.innerHTML = `
-          <div class="gallery-card-img-wrapper img-fallback-wrapper" data-title="${proj.name}">
-            <img src="${proj.img}" alt="${proj.alt}" class="project-img" width="400" height="360" loading="lazy" decoding="async" onerror="this.style.opacity='0';">
+          <div class="gallery-card-img-wrapper" style="aspect-ratio:1/1;">
+            <img src="${proj.img}" alt="${proj.alt}" class="project-img" width="500" height="500" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;" onerror="const c=this.closest('.gallery-card');if(c){c.remove();}window.onWorkImgError && window.onWorkImgError('${proj.id}');">
           </div>
           <div class="gallery-card-meta">
             <div>
               <h3 class="gallery-card-title">${proj.name}</h3>
-              <div style="font-size: 0.8rem; color: var(--slate); margin-top: 0.2rem;">${proj.location}</div>
+              <div style="font-size: 0.8rem; color: var(--muted); margin-top: 0.2rem;">${proj.location}</div>
             </div>
             <span class="gallery-card-tag">${proj.category}</span>
           </div>
         `;
 
-        card.addEventListener("click", () => openLightbox(idx));
+        card.addEventListener("click", () => openLightboxForCard(card));
         card.addEventListener("keydown", (e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            openLightbox(idx);
+            openLightboxForCard(card);
           }
         });
 
         galleryGrid.appendChild(card);
       });
+
+      checkGalleryEmpty();
     }
 
+    window.onWorkImgError = function(id) {
+      failedProjectIds.add(id);
+      checkGalleryEmpty();
+    };
+
     // Initial Render
-    renderGallery(filteredProjects);
+    renderGallery(getValidProjects(activeFilter));
+    setTimeout(checkGalleryEmpty, 300);
+    setTimeout(checkGalleryEmpty, 1000);
 
     // Filter Logic
     filterBtns.forEach((btn) => {
@@ -159,14 +210,7 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.classList.add("active");
 
         activeFilter = btn.getAttribute("data-filter") || "all";
-
-        if (activeFilter === "all") {
-          filteredProjects = [...window.SIGNAGE_PROJECTS];
-        } else {
-          filteredProjects = window.SIGNAGE_PROJECTS.filter(
-            (p) => p.categorySlug === activeFilter || p.category.toLowerCase().includes(activeFilter)
-          );
-        }
+        const filtered = getValidProjects(activeFilter);
 
         if (typeof window.gsap !== "undefined" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
           window.gsap.to(galleryGrid, {
@@ -174,20 +218,33 @@ document.addEventListener("DOMContentLoaded", () => {
             y: 10,
             duration: 0.25,
             onComplete: () => {
-              renderGallery(filteredProjects);
+              renderGallery(filtered);
               window.gsap.to(galleryGrid, { opacity: 1, y: 0, duration: 0.35 });
             }
           });
         } else {
-          renderGallery(filteredProjects);
+          renderGallery(filtered);
         }
       });
     });
 
-    // Lightbox Controls
+    // Lightbox Controls - ONLY navigate existing items
+    function getRemainingCards() {
+      return Array.from(galleryGrid.querySelectorAll(".gallery-card"));
+    }
+
+    function openLightboxForCard(card) {
+      const cards = getRemainingCards();
+      const idx = cards.indexOf(card);
+      if (idx !== -1) {
+        openLightbox(idx);
+      }
+    }
+
     function openLightbox(index) {
-      if (!lightboxModal) return;
-      currentIndex = index;
+      const cards = getRemainingCards();
+      if (!lightboxModal || cards.length === 0) return;
+      currentIndex = (index + cards.length) % cards.length;
       updateLightboxContent();
       lightboxModal.classList.add("active");
       document.body.style.overflow = "hidden";
@@ -208,23 +265,37 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function updateLightboxContent() {
-      const item = filteredProjects[currentIndex];
-      if (!item) return;
-      if (lightboxImg) {
-        lightboxImg.src = item.img;
-        lightboxImg.alt = item.alt;
+      const cards = getRemainingCards();
+      if (cards.length === 0) {
+        closeLightbox();
+        return;
       }
-      if (lightboxTitle) lightboxTitle.textContent = `${item.name} (${item.location})`;
-      if (lightboxType) lightboxType.textContent = item.category;
+      currentIndex = (currentIndex + cards.length) % cards.length;
+      const card = cards[currentIndex];
+      const img = card.querySelector("img");
+      const title = card.querySelector(".gallery-card-title")?.textContent || "";
+      const loc = card.querySelector("div[style*='font-size: 0.8rem']")?.textContent || "";
+      const cat = card.querySelector(".gallery-card-tag")?.textContent || "";
+
+      if (lightboxImg && img) {
+        lightboxImg.src = img.src;
+        lightboxImg.alt = img.alt;
+      }
+      if (lightboxTitle) lightboxTitle.textContent = `${title} (${loc})`;
+      if (lightboxType) lightboxType.textContent = cat;
     }
 
     function showPrev() {
-      currentIndex = (currentIndex - 1 + filteredProjects.length) % filteredProjects.length;
+      const cards = getRemainingCards();
+      if (cards.length === 0) return;
+      currentIndex = (currentIndex - 1 + cards.length) % cards.length;
       updateLightboxContent();
     }
 
     function showNext() {
-      currentIndex = (currentIndex + 1) % filteredProjects.length;
+      const cards = getRemainingCards();
+      if (cards.length === 0) return;
+      currentIndex = (currentIndex + 1) % cards.length;
       updateLightboxContent();
     }
 

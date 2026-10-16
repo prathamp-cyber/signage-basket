@@ -7,7 +7,8 @@ window.SIGNAGE_PRODUCTS = [
   {
     name: "Backlit Logo Sign",
     category: "Glow Signs",
-    img: "assets/images/work-singfuels.jpg",
+    img: "assets/images/mock-glow-sign.jpg",
+    alt: "Sample backlit LED glow sign design by Signage Basket",
     price: null,
     badge: "Popular",
     slug: "backlit-logo-sign"
@@ -15,7 +16,8 @@ window.SIGNAGE_PRODUCTS = [
   {
     name: "Raised 3D Logo Letters",
     category: "3D Letters",
-    img: "assets/images/work-shoolin.jpg",
+    img: "assets/images/mock-3d-letters.jpg",
+    alt: "Sample raised 3D logo letters design by Signage Basket",
     price: null,
     badge: "Popular",
     slug: "raised-3d-logo-letters"
@@ -23,7 +25,8 @@ window.SIGNAGE_PRODUCTS = [
   {
     name: "Villa Name Plate",
     category: "Home Nameplates",
-    img: "assets/images/work-mishvik.jpg",
+    img: "assets/images/mock-home-nameplate.jpg",
+    alt: "Sample brass home nameplate design by Signage Basket",
     price: null,
     badge: "Popular",
     slug: "villa-name-plate"
@@ -31,7 +34,8 @@ window.SIGNAGE_PRODUCTS = [
   {
     name: "Office Name Board",
     category: "Office Boards",
-    img: "assets/images/work-dedipya.jpg",
+    img: "assets/images/mock-office-board.jpg",
+    alt: "Sample acrylic office name board design by Signage Basket",
     price: null,
     badge: "Popular",
     slug: "office-name-board"
@@ -39,7 +43,8 @@ window.SIGNAGE_PRODUCTS = [
   {
     name: "Acrylic Info Board",
     category: "Office Boards",
-    img: "assets/images/work-hermes.jpg",
+    img: "assets/images/mock-acrylic-board.jpg",
+    alt: "Sample black acrylic directory board design by Signage Basket",
     price: null,
     badge: "Popular",
     slug: "acrylic-info-board"
@@ -47,7 +52,8 @@ window.SIGNAGE_PRODUCTS = [
   {
     name: "Reception Wall Branding",
     category: "Interior Branding",
-    img: "assets/images/work-integrated.jpg",
+    img: "assets/images/mock-reception-wall.jpg",
+    alt: "Sample 3D logo reception wall branding design by Signage Basket",
     price: null,
     badge: null,
     slug: "reception-wall-branding"
@@ -55,7 +61,8 @@ window.SIGNAGE_PRODUCTS = [
   {
     name: "Wall of Fame Panel",
     category: "Interior Branding",
-    img: "assets/images/work-wall-of-fame.jpg",
+    img: "assets/images/mock-wall-panel.jpg",
+    alt: "Sample wall of fame display panel design by Signage Basket",
     price: null,
     badge: null,
     slug: "wall-of-fame-panel"
@@ -63,7 +70,8 @@ window.SIGNAGE_PRODUCTS = [
   {
     name: "Studio Logo Wall",
     category: "3D Letters",
-    img: "assets/images/work-core-barbell.jpg",
+    img: "assets/images/mock-studio-wall.jpg",
+    alt: "Sample studio logo wall lettering design by Signage Basket",
     price: null,
     badge: null,
     slug: "studio-logo-wall"
@@ -71,7 +79,8 @@ window.SIGNAGE_PRODUCTS = [
   {
     name: "Facade Glow Sign",
     category: "Glow Signs",
-    img: "assets/images/work-elysian.jpg",
+    img: "assets/images/mock-facade-night.jpg",
+    alt: "Sample building facade glow sign design by Signage Basket",
     price: null,
     badge: null,
     slug: "facade-glow-sign"
@@ -79,7 +88,8 @@ window.SIGNAGE_PRODUCTS = [
   {
     name: "Company Info Board",
     category: "Office Boards",
-    img: "assets/images/work-shoolin-board.jpg",
+    img: "assets/images/mock-steel-board.jpg",
+    alt: "Sample brushed steel company info board design by Signage Basket",
     price: null,
     badge: null,
     slug: "company-info-board"
@@ -100,10 +110,13 @@ function renderPopularDesigns() {
       ? `<span class="product-badge">${item.badge}</span>`
       : "";
 
+    const safeName = item.name.replace(/"/g, '&quot;');
+    const altText = item.alt || `Sample ${item.name} design by Signage Basket`;
+
     return `
-      <a href="contact.html?design=${encodeURIComponent(item.slug)}" class="product-card reveal-up" title="Inquire about ${item.name} in Gandhidham, Gujarat">
-        <div class="product-img-wrap">
-          <img src="${item.img}" alt="${item.name} made by Signage Basket" width="500" height="500" loading="lazy" decoding="async">
+      <a href="contact.html?design=${encodeURIComponent(item.slug)}" class="product-card reveal-up" title="Inquire about ${safeName} in Gandhidham, Gujarat">
+        <div class="product-img-wrap" style="aspect-ratio:1/1;">
+          <img src="${item.img}" alt="${altText}" width="500" height="500" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';if(!this.parentElement.querySelector('.img-fallback-surface')){const f=document.createElement('div');f.className='img-fallback-surface';f.textContent='${safeName}';this.parentElement.appendChild(f);}">
           ${badgeHtml}
         </div>
         <div class="product-meta">

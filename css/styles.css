@@ -2052,3 +2052,70 @@ html.js-anim .reveal-up {
   .work-gallery-grid { grid-template-columns: 1fr; }
   .about-services-grid { grid-template-columns: 1fr; }
 }
+
+/* 24. IMAGE HYGIENE, SAMPLE CAPTIONS & EMPTY STATES */
+.sample-visuals-caption {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: -1.75rem;
+  margin-bottom: 2.5rem;
+  letter-spacing: 0.03em;
+}
+
+.page-hero .sample-visuals-caption {
+  margin-top: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.category-img-dual {
+  display: flex;
+  gap: 1rem;
+  align-items: stretch;
+  width: 100%;
+}
+.category-img-dual .category-img-frame:first-child {
+  flex: 2;
+  aspect-ratio: 4 / 3;
+}
+.category-img-dual .category-img-secondary {
+  flex: 1;
+  aspect-ratio: 1 / 1;
+  align-self: center;
+}
+@media (max-width: 600px) {
+  .category-img-dual .category-img-secondary {
+    display: none;
+  }
+}
+
+.img-fallback-surface {
+  width: 100%;
+  height: 100%;
+  background-color: #f4f4f4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.5rem 1rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  min-height: 140px;
+}
+
+.work-empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 4rem 1.5rem;
+  margin: 0 auto;
+  max-width: 600px;
+}
+.work-empty-state p {
+  color: var(--muted);
+  font-size: 1.05rem;
+  margin-bottom: 1.75rem;
+  line-height: 1.6;
+}
+
