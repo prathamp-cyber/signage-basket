@@ -1,0 +1,10 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/design/:slug",
+      "destination": "/product.html"
+    }
+  ]
+}

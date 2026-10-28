@@ -268,7 +268,12 @@ document.addEventListener("DOMContentLoaded", () => {
         wheelMultiplier: 1,
         touchMultiplier: 0
       });
-      lenis.on("scroll", ScrollTrigger.update);
+      lenis.on("scroll", () => {
+        ScrollTrigger.update();
+        if (typeof window.updateHeaderState === "function") {
+          window.updateHeaderState();
+        }
+      });
       gsap.ticker.add((time) => lenis.raf(time * 1000));
       gsap.ticker.lagSmoothing(0);
     }
@@ -305,6 +310,102 @@ document.addEventListener("DOMContentLoaded", () => {
     console.warn("GSAP animation warning:", err);
     clearTimeout(failsafeTimer);
     forceRestoreVisibility("JS Animation Error");
+  }
+
+  // Data-driven category row buttons from window.CATALOG
+  try {
+    if (window.CATALOG) {
+      document.querySelectorAll(".category-row[id]").forEach((row) => {
+        const slug = row.id;
+        const catData = window.CATALOG[slug];
+        if (catData) {
+          const btn = row.querySelector(".category-text-panel .btn");
+          if (btn) {
+            btn.href = catData.page;
+            const catLabel = catData.title.replace(/^Home\s+/i, "");
+            btn.title = `Browse ${catData.title}`;
+            const spanText = btn.querySelector("span:not(.btn-arrow)");
+            if (spanText) {
+              spanText.textContent = `Browse ${catLabel}`;
+            } else {
+              btn.innerHTML = `<span>Browse ${catLabel}</span><span class="btn-arrow" aria-hidden="true"><span class="icon i-arrow-right"></span></span>`;
+            }
+          }
+        }
+      });
+    }
+  } catch (e) {
+    console.warn("Catalog row button error:", e);
+  }
+
+  // 8. HOUSE NAMEPLATES CATALOG GRID ROUTING & LINK UPDATES
+  try {
+    function updateCatalogCards() {
+      const grid = document.getElementById("catalogGrid");
+      if (!grid) return;
+      grid.querySelectorAll(".catalog-card").forEach((card) => {
+        const slug = card.getAttribute("data-slug");
+        if (!slug) return;
+
+        const link = card.querySelector(".catalog-card-link");
+        if (link) {
+          link.href = `/design/${encodeURIComponent(slug)}`;
+          const linkSpan = link.querySelector("span:not(.icon)");
+          if (linkSpan && linkSpan.textContent.includes("Request")) {
+            linkSpan.textContent = "View details";
+          }
+        }
+
+        const nameEl = card.querySelector(".catalog-card-name");
+        if (nameEl && !nameEl.style.cursor) {
+          nameEl.style.cursor = "pointer";
+        }
+        const mediaEl = card.querySelector(".catalog-card-media");
+        if (mediaEl && !mediaEl.style.cursor) {
+          mediaEl.style.cursor = "pointer";
+        }
+      });
+
+      // Update viewer modal button if present
+      const viewerBtn = document.getElementById("viewerRequestBtn");
+      if (viewerBtn) {
+        const span = viewerBtn.querySelector("span:not(.btn-arrow)");
+        if (span && span.textContent.includes("Request")) {
+          span.textContent = "View details";
+        }
+      }
+    }
+
+    const gridEl = document.getElementById("catalogGrid");
+    if (gridEl) {
+      updateCatalogCards();
+
+      // Mutation observer to maintain links when filters change cards
+      const obs = new MutationObserver(() => {
+        updateCatalogCards();
+      });
+      obs.observe(gridEl, { childList: true, subtree: true });
+
+      // Click delegation for entire card (except zoom button)
+      gridEl.addEventListener("click", (e) => {
+        const zoom = e.target.closest(".catalog-zoom-btn");
+        if (zoom) {
+          // Allow default zoom button viewer to open
+          return;
+        }
+        const card = e.target.closest(".catalog-card");
+        if (card) {
+          const slug = card.getAttribute("data-slug");
+          if (slug) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.location.href = `/design/${encodeURIComponent(slug)}`;
+          }
+        }
+      }, true);
+    }
+  } catch (err) {
+    console.warn("Catalog cards link upgrade warning:", err);
   }
 
   initImageFallbackHandlers();

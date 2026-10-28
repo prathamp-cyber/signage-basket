@@ -7,7 +7,7 @@ window.SIGNAGE_PRODUCTS = [
   {
     name: "Backlit Logo Sign",
     category: "Glow Signs",
-    img: "assets/images/mock-glow-sign.jpg",
+    img: "/assets/images/mock-glow-sign.jpg",
     alt: "Sample backlit LED glow sign design by Signage Basket",
     price: null,
     badge: "Popular",
@@ -16,7 +16,7 @@ window.SIGNAGE_PRODUCTS = [
   {
     name: "Raised 3D Logo Letters",
     category: "3D Letters",
-    img: "assets/images/mock-3d-letters.jpg",
+    img: "/assets/images/mock-3d-letters.jpg",
     alt: "Sample raised 3D logo letters design by Signage Basket",
     price: null,
     badge: "Popular",
@@ -25,7 +25,7 @@ window.SIGNAGE_PRODUCTS = [
   {
     name: "Villa Name Plate",
     category: "Home Nameplates",
-    img: "assets/images/mock-home-nameplate.jpg",
+    img: "/assets/images/mock-home-nameplate.jpg",
     alt: "Sample brass home nameplate design by Signage Basket",
     price: null,
     badge: "Popular",
@@ -34,7 +34,7 @@ window.SIGNAGE_PRODUCTS = [
   {
     name: "Office Name Board",
     category: "Office Boards",
-    img: "assets/images/mock-office-board.jpg",
+    img: "/assets/images/mock-office-board.jpg",
     alt: "Sample acrylic office name board design by Signage Basket",
     price: null,
     badge: "Popular",
@@ -43,7 +43,7 @@ window.SIGNAGE_PRODUCTS = [
   {
     name: "Acrylic Info Board",
     category: "Office Boards",
-    img: "assets/images/mock-acrylic-board.jpg",
+    img: "/assets/images/mock-acrylic-board.jpg",
     alt: "Sample black acrylic directory board design by Signage Basket",
     price: null,
     badge: "Popular",
@@ -52,7 +52,7 @@ window.SIGNAGE_PRODUCTS = [
   {
     name: "Reception Wall Branding",
     category: "Interior Branding",
-    img: "assets/images/mock-reception-wall.jpg",
+    img: "/assets/images/mock-reception-wall.jpg",
     alt: "Sample 3D logo reception wall branding design by Signage Basket",
     price: null,
     badge: null,
@@ -61,7 +61,7 @@ window.SIGNAGE_PRODUCTS = [
   {
     name: "Wall of Fame Panel",
     category: "Interior Branding",
-    img: "assets/images/mock-wall-panel.jpg",
+    img: "/assets/images/mock-wall-panel.jpg",
     alt: "Sample wall of fame display panel design by Signage Basket",
     price: null,
     badge: null,
@@ -70,7 +70,7 @@ window.SIGNAGE_PRODUCTS = [
   {
     name: "Studio Logo Wall",
     category: "3D Letters",
-    img: "assets/images/mock-studio-wall.jpg",
+    img: "/assets/images/mock-studio-wall.jpg",
     alt: "Sample studio logo wall lettering design by Signage Basket",
     price: null,
     badge: null,
@@ -79,7 +79,7 @@ window.SIGNAGE_PRODUCTS = [
   {
     name: "Facade Glow Sign",
     category: "Glow Signs",
-    img: "assets/images/mock-facade-night.jpg",
+    img: "/assets/images/mock-facade-night.jpg",
     alt: "Sample building facade glow sign design by Signage Basket",
     price: null,
     badge: null,
@@ -88,7 +88,7 @@ window.SIGNAGE_PRODUCTS = [
   {
     name: "Company Info Board",
     category: "Office Boards",
-    img: "assets/images/mock-steel-board.jpg",
+    img: "/assets/images/mock-steel-board.jpg",
     alt: "Sample brushed steel company info board design by Signage Basket",
     price: null,
     badge: null,
@@ -114,7 +114,7 @@ function renderPopularDesigns() {
     const altText = item.alt || `Sample ${item.name} design by Signage Basket`;
 
     return `
-      <a href="contact.html?design=${encodeURIComponent(item.slug)}" class="product-card reveal-up" title="Inquire about ${safeName} in Gandhidham, Gujarat">
+      <a href="/contact?design=${encodeURIComponent(item.slug)}" class="product-card reveal-up" title="Inquire about ${safeName} in Gandhidham, Gujarat">
         <div class="product-img-wrap" style="aspect-ratio:1/1;">
           <img src="${item.img}" alt="${altText}" width="500" height="500" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';if(!this.parentElement.querySelector('.img-fallback-surface')){const f=document.createElement('div');f.className='img-fallback-surface';f.textContent='${safeName}';this.parentElement.appendChild(f);}">
           ${badgeHtml}

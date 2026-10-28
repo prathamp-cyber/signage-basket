@@ -1,51 +1,118 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://www.signagebasket.in/index.html</loc>
-    <lastmod>2026-10-13</lastmod>
+    <loc>https://www.signagebasket.in/</loc>
+    <lastmod>2026-10-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://www.signagebasket.in/collection.html</loc>
-    <lastmod>2026-10-13</lastmod>
+    <loc>https://www.signagebasket.in/collection</loc>
+    <lastmod>2026-10-28</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://www.signagebasket.in/our-work.html</loc>
-    <lastmod>2026-10-13</lastmod>
+    <loc>https://www.signagebasket.in/house-nameplates</loc>
+    <lastmod>2026-10-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.signagebasket.in/about.html</loc>
-    <lastmod>2026-10-13</lastmod>
+    <loc>https://www.signagebasket.in/our-work</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.signagebasket.in/about</loc>
+    <lastmod>2026-10-28</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://www.signagebasket.in/contact.html</loc>
-    <lastmod>2026-10-13</lastmod>
+    <loc>https://www.signagebasket.in/contact</loc>
+    <lastmod>2026-10-28</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://www.signagebasket.in/privacy-policy.html</loc>
-    <lastmod>2026-10-13</lastmod>
+    <loc>https://www.signagebasket.in/privacy-policy</loc>
+    <lastmod>2026-10-28</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://www.signagebasket.in/terms.html</loc>
-    <lastmod>2026-10-13</lastmod>
+    <loc>https://www.signagebasket.in/terms</loc>
+    <lastmod>2026-10-28</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://www.signagebasket.in/shipping-installation.html</loc>
-    <lastmod>2026-10-13</lastmod>
+    <loc>https://www.signagebasket.in/shipping-installation</loc>
+    <lastmod>2026-10-28</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
+  </url>
+  <!-- House Nameplate Product Detail Pages -->
+  <url>
+    <loc>https://www.signagebasket.in/design/hanging-brass-nameplate</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.signagebasket.in/design/classic-brass-wall-plate</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.signagebasket.in/design/round-brass-house-number-plate</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.signagebasket.in/design/oval-steel-nameplate</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.signagebasket.in/design/laser-cut-metal-name</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.signagebasket.in/design/modern-matte-black-plate</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.signagebasket.in/design/round-black-gold-plate</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.signagebasket.in/design/walnut-wood-nameplate</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.signagebasket.in/design/white-marble-nameplate</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.signagebasket.in/design/led-backlit-nameplate</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
   </url>
 </urlset>

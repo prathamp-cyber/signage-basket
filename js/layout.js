@@ -19,7 +19,8 @@ document.addEventListener("DOMContentLoaded", () => {
       whatsappDefaultMsg: "Hi Signage Basket, I'd like a quote for a nameplate/signage in Gandhidham/Gujarat."
     };
 
-    const currentPath = window.location.pathname.split("/").pop() || "index.html";
+    const rawPath = window.location.pathname.replace(/\/+$/, "").replace(/\.html$/, "");
+    const normalizedPath = rawPath === "" || rawPath === "/index" ? "/" : rawPath;
 
     // 1. Page Transition Fade Overlay
     let pageFade = document.getElementById("pageFadeOverlay");
@@ -38,26 +39,29 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }, 3000);
 
-    // Intercept internal link clicks for page fade
+    // Intercept internal link clicks for page fade (handles extensionless same-origin paths)
     document.querySelectorAll("a[href]").forEach((link) => {
       const href = link.getAttribute("href");
       if (
         href &&
         !href.startsWith("#") &&
-        !href.startsWith("http") &&
         !href.startsWith("mailto:") &&
         !href.startsWith("tel:") &&
         !href.startsWith("javascript:") &&
         link.target !== "_blank"
       ) {
-        link.addEventListener("click", (e) => {
-          e.preventDefault();
-          if (pageFade) {
-            pageFade.classList.remove("fade-out");
-            pageFade.style.pointerEvents = "auto";
-          }
-          setTimeout(() => { window.location.href = href; }, 280);
-        });
+        const isInternal = href.startsWith("/") || (!href.startsWith("http:") && !href.startsWith("https:")) || (link.origin === window.location.origin);
+        if (isInternal) {
+          link.addEventListener("click", (e) => {
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            if (pageFade) {
+              pageFade.classList.remove("fade-out");
+              pageFade.style.pointerEvents = "auto";
+            }
+            setTimeout(() => { window.location.href = href; }, 280);
+          });
+        }
       }
     });
 
@@ -65,41 +69,43 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!document.querySelector(".site-header")) {
       const waMsg = encodeURIComponent(config.whatsappDefaultMsg || "Hi Signage Basket, I'd like a quote.");
       const waUrl = `https://wa.me/${config.whatsappRaw}?text=${waMsg}`;
-      const isHome    = currentPath === "index.html" || currentPath === "";
-      const isColl    = currentPath === "collection.html";
-      const isWork    = currentPath === "our-work.html";
-      const isAbout   = currentPath === "about.html";
-      const isContact = currentPath === "contact.html";
+      const isHome    = normalizedPath === "/";
+      const isColl    = normalizedPath === "/collection" || normalizedPath === "/house-nameplates";
+      const isWork    = normalizedPath === "/our-work";
+      const isAbout   = normalizedPath === "/about";
+      const isContact = normalizedPath === "/contact";
 
       const headerHtml = `
         <header class="site-header" id="mainHeader" role="banner">
           <div class="header-inner">
             <div class="header-left">
-              <a href="index.html" class="site-logo" aria-label="Signage Basket Home">
-                <img src="assets/logo/logo-wordmark.svg" alt="Signage Basket" class="site-logo-img" width="220" height="60"
-                  onerror="this.style.display='none';this.nextElementSibling.style.display='inline';">
+              <a href="/" class="site-logo" aria-label="Signage Basket Home">
+                <img src="/assets/logo/logo-wordmark.svg" alt="Signage Basket" class="site-logo-img logo-dark" width="220" height="60"
+                  onerror="this.style.display='none';">
+                <img src="/assets/logo/logo-wordmark-light.svg" alt="Signage Basket" class="site-logo-img logo-light" width="220" height="60"
+                  onerror="this.style.display='none';">
                 <span class="logo-fallback-text" style="display:none;">Signage Basket</span>
               </a>
 
               <nav class="nav-desktop" aria-label="Main Navigation">
-                <a href="index.html" class="nav-link ${isHome ? 'active' : ''}">Home</a>
+                <a href="/" class="nav-link ${isHome ? 'active' : ''}">Home</a>
 
                 <div class="nav-dropdown-wrapper">
-                  <a href="collection.html" class="nav-link nav-dropdown-trigger ${isColl ? 'active' : ''}">
+                  <a href="/collection" class="nav-link nav-dropdown-trigger ${isColl ? 'active' : ''}">
                     Collection <span class="icon i-chevron-down nav-chevron" aria-hidden="true"></span>
                   </a>
                   <div class="nav-dropdown-menu" role="menu">
-                    <a href="collection.html#home-nameplates" class="dropdown-item" role="menuitem">Home Nameplates</a>
-                    <a href="collection.html#glow-signs" class="dropdown-item" role="menuitem">LED &amp; Glow Signs</a>
-                    <a href="collection.html#3d-letters" class="dropdown-item" role="menuitem">3D Letter Signs</a>
-                    <a href="collection.html#office-boards" class="dropdown-item" role="menuitem">Acrylic Office Boards</a>
-                    <a href="collection.html#wall-branding" class="dropdown-item" role="menuitem">Interior Wall Branding</a>
+                    <a href="/house-nameplates" class="dropdown-item" role="menuitem">Home Nameplates</a>
+                    <a href="/collection#glow-signs" class="dropdown-item" role="menuitem">LED &amp; Glow Signs</a>
+                    <a href="/collection#3d-letters" class="dropdown-item" role="menuitem">3D Letter Signs</a>
+                    <a href="/collection#office-boards" class="dropdown-item" role="menuitem">Acrylic Office Boards</a>
+                    <a href="/collection#wall-branding" class="dropdown-item" role="menuitem">Interior Wall Branding</a>
                   </div>
                 </div>
 
-                <a href="our-work.html" class="nav-link ${isWork ? 'active' : ''}">Our Work</a>
-                <a href="about.html" class="nav-link ${isAbout ? 'active' : ''}">About</a>
-                <a href="contact.html" class="nav-link ${isContact ? 'active' : ''}">Contact</a>
+                <a href="/our-work" class="nav-link ${isWork ? 'active' : ''}">Our Work</a>
+                <a href="/about" class="nav-link ${isAbout ? 'active' : ''}">About</a>
+                <a href="/contact" class="nav-link ${isContact ? 'active' : ''}">Contact</a>
               </nav>
             </div>
 
@@ -110,7 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <a href="${waUrl}" target="_blank" rel="noopener" class="header-icon-btn wa-btn" aria-label="Chat on WhatsApp" title="WhatsApp Us">
                 <span class="icon i-whatsapp" aria-hidden="true"></span>
               </a>
-              <a href="contact.html" class="btn btn-outline header-quote-btn" title="Get a Quote">
+              <a href="/contact" class="btn btn-outline header-quote-btn" title="Get a Quote">
                 <span>Get a Quote</span>
                 <span class="btn-arrow" aria-hidden="true"><span class="icon i-arrow-right"></span></span>
               </a>
@@ -138,8 +144,8 @@ document.addEventListener("DOMContentLoaded", () => {
         <!-- Mobile Drawer -->
         <div class="mobile-nav-overlay" id="mobileNavOverlay" role="dialog" aria-modal="true" aria-label="Navigation Menu">
           <div class="mobile-drawer-header">
-            <a href="index.html">
-              <img src="assets/logo/logo-wordmark.svg" alt="Signage Basket" height="36" style="width:auto;"
+            <a href="/">
+              <img src="/assets/logo/logo-wordmark.svg" alt="Signage Basket" height="36" style="width:auto;"
                 onerror="this.style.display='none';">
             </a>
             <button class="mobile-drawer-close" id="mobileDrawerClose" aria-label="Close Menu">
@@ -147,20 +153,20 @@ document.addEventListener("DOMContentLoaded", () => {
             </button>
           </div>
           <nav class="mobile-nav-links" aria-label="Mobile Navigation">
-            <a href="index.html" class="mobile-nav-link ${isHome ? 'active' : ''}">Home</a>
+            <a href="/" class="mobile-nav-link ${isHome ? 'active' : ''}">Home</a>
             <div class="mobile-nested-group">
-              <a href="collection.html" class="mobile-nav-link ${isColl ? 'active' : ''}">Collection</a>
+              <a href="/collection" class="mobile-nav-link ${isColl ? 'active' : ''}">Collection</a>
               <div class="mobile-nested-links">
-                <a href="collection.html#home-nameplates">Home Nameplates</a>
-                <a href="collection.html#glow-signs">LED &amp; Glow Signs</a>
-                <a href="collection.html#3d-letters">3D Letter Signs</a>
-                <a href="collection.html#office-boards">Acrylic Office Boards</a>
-                <a href="collection.html#wall-branding">Interior Wall Branding</a>
+                <a href="/house-nameplates">Home Nameplates</a>
+                <a href="/collection#glow-signs">LED &amp; Glow Signs</a>
+                <a href="/collection#3d-letters">3D Letter Signs</a>
+                <a href="/collection#office-boards">Acrylic Office Boards</a>
+                <a href="/collection#wall-branding">Interior Wall Branding</a>
               </div>
             </div>
-            <a href="our-work.html" class="mobile-nav-link ${isWork ? 'active' : ''}">Our Work</a>
-            <a href="about.html" class="mobile-nav-link ${isAbout ? 'active' : ''}">About</a>
-            <a href="contact.html" class="mobile-nav-link ${isContact ? 'active' : ''}">Contact</a>
+            <a href="/our-work" class="mobile-nav-link ${isWork ? 'active' : ''}">Our Work</a>
+            <a href="/about" class="mobile-nav-link ${isAbout ? 'active' : ''}">About</a>
+            <a href="/contact" class="mobile-nav-link ${isContact ? 'active' : ''}">Contact</a>
           </nav>
           <div class="mobile-nav-footer">
             <p><strong>Phone:</strong> <a href="tel:${config.phone}">${config.phone}</a></p>
@@ -195,8 +201,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
               <!-- Col 1: Brand -->
               <div class="footer-col">
-                <a href="index.html" class="footer-logo-link" title="Signage Basket Home">
-                  <img src="assets/logo/logo-wordmark-light.svg" alt="Signage Basket" class="footer-logo-img"
+                <a href="/" class="footer-logo-link" title="Signage Basket Home">
+                  <img src="/assets/logo/logo-wordmark-light.svg" alt="Signage Basket" class="footer-logo-img"
                     onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span style=&quot;color:#fff;font-size:1.2rem;font-weight:600;&quot;>Signage Basket</span>');">
                 </a>
                 <p class="footer-desc">A signage and nameplate studio in Gandhidham, Kutch — custom-crafting home nameplates, LED glow sign boards, and 3D letters for clients across Gujarat and India.</p>
@@ -207,12 +213,12 @@ document.addEventListener("DOMContentLoaded", () => {
               <div class="footer-col">
                 <h4 class="footer-col-title">Quick Links</h4>
                 <ul class="footer-links-list">
-                  <li><a href="index.html" class="footer-link">Home</a></li>
-                  <li><a href="collection.html" class="footer-link">Collection</a></li>
-                  <li><a href="our-work.html" class="footer-link">Our Work</a></li>
-                  <li><a href="about.html" class="footer-link">About</a></li>
-                  <li><a href="collection.html#faq" class="footer-link">FAQ</a></li>
-                  <li><a href="contact.html" class="footer-link">Get a Quote</a></li>
+                  <li><a href="/" class="footer-link">Home</a></li>
+                  <li><a href="/collection" class="footer-link">Collection</a></li>
+                  <li><a href="/our-work" class="footer-link">Our Work</a></li>
+                  <li><a href="/about" class="footer-link">About</a></li>
+                  <li><a href="/collection#faq" class="footer-link">FAQ</a></li>
+                  <li><a href="/contact" class="footer-link">Get a Quote</a></li>
                 </ul>
               </div>
 
@@ -220,9 +226,9 @@ document.addEventListener("DOMContentLoaded", () => {
               <div class="footer-col">
                 <h4 class="footer-col-title">Policies</h4>
                 <ul class="footer-links-list">
-                  <li><a href="privacy-policy.html" class="footer-link">Privacy Policy</a></li>
-                  <li><a href="terms.html" class="footer-link">Terms of Service</a></li>
-                  <li><a href="shipping-installation.html" class="footer-link">Shipping &amp; Installation</a></li>
+                  <li><a href="/privacy-policy" class="footer-link">Privacy Policy</a></li>
+                  <li><a href="/terms" class="footer-link">Terms of Service</a></li>
+                  <li><a href="/shipping-installation" class="footer-link">Shipping &amp; Installation</a></li>
                 </ul>
               </div>
 
@@ -255,12 +261,13 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="footer-seo-row">
               <div class="footer-seo-inner">
                 <span class="footer-seo-label">Popular searches</span>
-                <a href="collection.html#home-nameplates" class="footer-link">Nameplate maker in Gandhidham</a>
-                <a href="collection.html#glow-signs" class="footer-link">LED glow sign boards in Gujarat</a>
-                <a href="collection.html#3d-letters" class="footer-link">3D letter signs</a>
-                <a href="collection.html#office-boards" class="footer-link">Office signage &amp; acrylic boards</a>
-                <a href="collection.html#wall-branding" class="footer-link">Interior wall branding</a>
-                <a href="collection.html#home-nameplates" class="footer-link">House name plate design</a>
+                <a href="/house-nameplates" class="footer-link">House nameplate designs</a>
+                <a href="/collection#home-nameplates" class="footer-link">Nameplate maker in Gandhidham</a>
+                <a href="/collection#glow-signs" class="footer-link">LED glow sign boards in Gujarat</a>
+                <a href="/collection#3d-letters" class="footer-link">3D letter signs</a>
+                <a href="/collection#office-boards" class="footer-link">Office signage &amp; acrylic boards</a>
+                <a href="/collection#wall-branding" class="footer-link">Interior wall branding</a>
+                <a href="/collection#home-nameplates" class="footer-link">House name plate design</a>
               </div>
             </div>
 
@@ -316,6 +323,7 @@ document.addEventListener("DOMContentLoaded", () => {
       mobileOverlay.classList.toggle("open", open);
       if (toggleBtn) toggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
       document.body.style.overflow = open ? "hidden" : "";
+      evaluateHeaderState();
     }
 
     if (toggleBtn) toggleBtn.addEventListener("click", () => setDrawerState(true));
@@ -327,31 +335,74 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // 6. Header Scroll Shadow
+    // 6. Header Scroll & Over-Hero State Handling
     const headerEl = document.getElementById("mainHeader");
-    if (headerEl) {
-      window.addEventListener("scroll", () => {
-        headerEl.classList.toggle("scrolled", window.scrollY > 10);
-      }, { passive: true });
-    }
-
-    // 7. Search Overlay
     const searchToggle = document.getElementById("searchToggleBtn");
     const searchOverlay = document.getElementById("searchOverlay");
     const searchClose   = document.getElementById("searchCloseBtn");
     const searchInput   = document.getElementById("searchInput");
+    const isHome = normalizedPath === "/";
 
+    let ticking = false;
+
+    function evaluateHeaderState() {
+      try {
+        if (!headerEl) return;
+        const scrollY = window.pageYOffset || window.scrollY || 0;
+        headerEl.classList.toggle("scrolled", scrollY > 10);
+
+        if (!isHome) {
+          headerEl.classList.remove("is-over-hero");
+          return;
+        }
+
+        const isDrawerOpen = mobileOverlay && mobileOverlay.classList.contains("open");
+        const isSearchOpen = searchOverlay && searchOverlay.classList.contains("open");
+
+        if (isDrawerOpen || isSearchOpen) {
+          headerEl.classList.remove("is-over-hero");
+        } else if (scrollY < 60) {
+          headerEl.classList.add("is-over-hero");
+        } else {
+          headerEl.classList.remove("is-over-hero");
+        }
+      } catch (err) {
+        if (headerEl) headerEl.classList.remove("is-over-hero");
+        console.warn("Header state evaluation error:", err);
+      }
+    }
+
+    window.updateHeaderState = evaluateHeaderState;
+
+    function requestHeaderUpdate() {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          evaluateHeaderState();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    }
+
+    window.addEventListener("scroll", requestHeaderUpdate, { passive: true });
+    window.addEventListener("resize", requestHeaderUpdate);
+    window.addEventListener("pageshow", evaluateHeaderState);
+    evaluateHeaderState();
+
+    // 7. Search Overlay
     function openSearch() {
       if (!searchOverlay) return;
       searchOverlay.classList.add("open");
       if (searchToggle) searchToggle.setAttribute("aria-expanded", "true");
       if (searchInput) { searchInput.focus(); }
+      evaluateHeaderState();
     }
 
     function closeSearch() {
       if (!searchOverlay) return;
       searchOverlay.classList.remove("open");
       if (searchToggle) searchToggle.setAttribute("aria-expanded", "false");
+      evaluateHeaderState();
     }
 
     if (searchToggle) searchToggle.addEventListener("click", openSearch);

@@ -11,39 +11,60 @@
     type: "Designs",
     label: p.name,
     sub: p.category,
-    url: `contact.html?design=${encodeURIComponent(p.slug)}`
+    url: `/contact?design=${encodeURIComponent(p.slug)}`
+  }));
+
+  const fallbackCatalogItems = [
+    { name: "Hanging Brass Nameplate", material: "Brass finish", slug: "hanging-brass-nameplate" },
+    { name: "Classic Brass Wall Plate", material: "Brass finish", slug: "classic-brass-wall-plate" },
+    { name: "Round Brass House Number Plate", material: "Brass finish", slug: "round-brass-house-number-plate" },
+    { name: "Oval Steel Nameplate", material: "Brushed steel finish", slug: "oval-steel-nameplate" },
+    { name: "Laser-Cut Metal Name", material: "Metal cut-out letters", slug: "laser-cut-metal-name" },
+    { name: "Modern Matte Black Plate", material: "Matte black", slug: "modern-matte-black-plate" },
+    { name: "Round Black & Gold Plate", material: "Matte black with gold", slug: "round-black-gold-plate" },
+    { name: "Walnut Wood Nameplate", material: "Wood finish", slug: "walnut-wood-nameplate" },
+    { name: "White Marble Nameplate", material: "Marble finish", slug: "white-marble-nameplate" },
+    { name: "LED Backlit Nameplate", material: "Backlit acrylic", slug: "led-backlit-nameplate" }
+  ];
+
+  const CATALOG_DESIGNS = (window.CATALOG && window.CATALOG["home-nameplates"] ? window.CATALOG["home-nameplates"].items : fallbackCatalogItems).map((item) => ({
+    type: "Designs",
+    label: item.name,
+    sub: `${item.material} · House Nameplates`,
+    url: `/design/${item.slug}`
   }));
 
   const COLLECTIONS_INDEX = [
-    { type: "Collections", label: "Home Nameplates",       sub: "Custom house & villa nameplates",       url: "collection.html#home-nameplates" },
-    { type: "Collections", label: "LED & Glow Signs",      sub: "Backlit commercial sign boards",        url: "collection.html#glow-signs"       },
-    { type: "Collections", label: "3D Letter Signs",       sub: "Raised acrylic & metal letters",        url: "collection.html#3d-letters"        },
-    { type: "Collections", label: "Acrylic Office Boards", sub: "Corporate directory & info boards",     url: "collection.html#office-boards"     },
-    { type: "Collections", label: "Interior Wall Branding",sub: "Lobby & gym feature wall installations",url: "collection.html#wall-branding"     }
+    { type: "Collections", label: "Home Nameplates",       sub: "Custom house & villa nameplates",       url: "/house-nameplates" },
+    { type: "Collections", label: "LED & Glow Signs",      sub: "Backlit commercial sign boards",        url: "/collection#glow-signs"       },
+    { type: "Collections", label: "3D Letter Signs",       sub: "Raised acrylic & metal letters",        url: "/collection#3d-letters"        },
+    { type: "Collections", label: "Acrylic Office Boards", sub: "Corporate directory & info boards",     url: "/collection#office-boards"     },
+    { type: "Collections", label: "Interior Wall Branding",sub: "Lobby & gym feature wall installations",url: "/collection#wall-branding"     }
   ];
 
   const PAGES_INDEX = [
-    { type: "Pages", label: "Home",             sub: "Signage Basket homepage",                  url: "index.html"                     },
-    { type: "Pages", label: "Collection",       sub: "Browse all signage products",              url: "collection.html"                },
-    { type: "Pages", label: "Our Work",         sub: "Portfolio of installed signs",             url: "our-work.html"                  },
-    { type: "Pages", label: "About",            sub: "About Signage Basket studio",              url: "about.html"                     },
-    { type: "Pages", label: "Contact",          sub: "Get a free 3D design preview & quote",     url: "contact.html"                   },
-    { type: "Pages", label: "FAQ",              sub: "Frequently asked questions",               url: "collection.html#faq"            },
-    { type: "Pages", label: "Privacy Policy",   sub: "How we handle your data",                  url: "privacy-policy.html"            },
-    { type: "Pages", label: "Terms of Service", sub: "Terms for custom made-to-order signs",     url: "terms.html"                    },
-    { type: "Pages", label: "Shipping & Installation", sub: "Delivery and installation details", url: "shipping-installation.html"    },
+    { type: "Pages", label: "Home",             sub: "Signage Basket homepage",                  url: "/"                     },
+    { type: "Pages", label: "House Nameplates", sub: "Browse custom house nameplate designs",    url: "/house-nameplates"     },
+    { type: "Pages", label: "Collection",       sub: "Browse all signage products",              url: "/collection"                },
+    { type: "Pages", label: "Our Work",         sub: "Portfolio of installed signs",             url: "/our-work"                  },
+    { type: "Pages", label: "About",            sub: "About Signage Basket studio",              url: "/about"                     },
+    { type: "Pages", label: "Contact",          sub: "Get a free 3D design preview & quote",     url: "/contact"                   },
+    { type: "Pages", label: "FAQ",              sub: "Frequently asked questions",               url: "/collection#faq"            },
+    { type: "Pages", label: "Privacy Policy",   sub: "How we handle your data",                  url: "/privacy-policy"            },
+    { type: "Pages", label: "Terms of Service", sub: "Terms for custom made-to-order signs",     url: "/terms"                    },
+    { type: "Pages", label: "Shipping & Installation", sub: "Delivery and installation details", url: "/shipping-installation"    },
     // FAQ questions (hard-coded anchors from collection.html)
-    { type: "Pages", label: "Who is the best nameplate maker in Gandhidham?",     sub: "FAQ",  url: "collection.html#faq" },
-    { type: "Pages", label: "Do you make LED glow sign boards in Kutch?",         sub: "FAQ",  url: "collection.html#faq" },
-    { type: "Pages", label: "Can you make Gujarati or bilingual name plates?",    sub: "FAQ",  url: "collection.html#faq" },
-    { type: "Pages", label: "Do you deliver nameplates across India?",            sub: "FAQ",  url: "collection.html#faq" },
-    { type: "Pages", label: "What materials are available for house name plates?",sub: "FAQ",  url: "collection.html#faq" },
-    { type: "Pages", label: "How long does a sign board take to make?",           sub: "FAQ",  url: "collection.html#faq" },
-    { type: "Pages", label: "Do you install signage outside Gandhidham?",         sub: "FAQ",  url: "collection.html#faq" },
-    { type: "Pages", label: "Can you make 3D letter signs for offices?",          sub: "FAQ",  url: "collection.html#faq" }
+    { type: "Pages", label: "Who is the best nameplate maker in Gandhidham?",     sub: "FAQ",  url: "/collection#faq" },
+    { type: "Pages", label: "Do you make LED glow sign boards in Kutch?",         sub: "FAQ",  url: "/collection#faq" },
+    { type: "Pages", label: "Can you make Gujarati or bilingual name plates?",    sub: "FAQ",  url: "/collection#faq" },
+    { type: "Pages", label: "Do you deliver nameplates across India?",            sub: "FAQ",  url: "/collection#faq" },
+    { type: "Pages", label: "What materials are available for house name plates?",sub: "FAQ",  url: "/collection#faq" },
+    { type: "Pages", label: "How long does a sign board take to make?",           sub: "FAQ",  url: "/collection#faq" },
+    { type: "Pages", label: "Do you install signage outside Gandhidham?",         sub: "FAQ",  url: "/collection#faq" },
+    { type: "Pages", label: "Can you make 3D letter signs for offices?",          sub: "FAQ",  url: "/collection#faq" }
   ];
 
-  const ALL_INDEX = [...PRODUCTS_INDEX, ...COLLECTIONS_INDEX, ...PAGES_INDEX];
+  const ALL_INDEX = [...CATALOG_DESIGNS, ...PRODUCTS_INDEX, ...COLLECTIONS_INDEX, ...PAGES_INDEX];
 
   function highlight(text, query) {
     if (!query) return text;

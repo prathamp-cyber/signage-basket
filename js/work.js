@@ -10,7 +10,7 @@ window.SIGNAGE_PROJECTS = [
     category: "Glow Signs",
     categorySlug: "glow-signs",
     location: "Gandhidham, Gujarat",
-    img: "assets/images/work-singfuels.jpg",
+    img: "/assets/images/work-singfuels.jpg",
     alt: "LED glow sign board for SingFuels office, made by Signage Basket in Gandhidham, Gujarat"
   },
   {
@@ -19,7 +19,7 @@ window.SIGNAGE_PROJECTS = [
     category: "Glow Signs",
     categorySlug: "glow-signs",
     location: "Gandhidham, Gujarat",
-    img: "assets/images/work-shoolin.jpg",
+    img: "/assets/images/work-shoolin.jpg",
     alt: "3D acrylic letter sign for Shoolin Trade Link LLP in Gandhidham, Gujarat"
   },
   {
@@ -28,7 +28,7 @@ window.SIGNAGE_PROJECTS = [
     category: "Boards",
     categorySlug: "boards",
     location: "Gandhidham, Gujarat",
-    img: "assets/images/work-shoolin-board.jpg",
+    img: "/assets/images/work-shoolin-board.jpg",
     alt: "Acrylic directory office board for Shoolin in Gandhidham, Gujarat"
   },
   {
@@ -37,7 +37,7 @@ window.SIGNAGE_PROJECTS = [
     category: "Office & Interiors",
     categorySlug: "office-interiors",
     location: "Kutch, Gujarat",
-    img: "assets/images/work-core-barbell.jpg",
+    img: "/assets/images/work-core-barbell.jpg",
     alt: "Gym glow sign board and wall logo for Core and Barbell in Kutch, Gujarat"
   },
   {
@@ -46,7 +46,7 @@ window.SIGNAGE_PROJECTS = [
     category: "Nameplates",
     categorySlug: "nameplates",
     location: "Gandhidham, Gujarat",
-    img: "assets/images/work-mishvik.jpg",
+    img: "/assets/images/work-mishvik.jpg",
     alt: "Bespoke house name plate design for Mishvik Villa in Gandhidham, Gujarat"
   },
   {
@@ -55,7 +55,7 @@ window.SIGNAGE_PROJECTS = [
     category: "Boards",
     categorySlug: "boards",
     location: "Gandhidham, Gujarat",
-    img: "assets/images/work-dedipya.jpg",
+    img: "/assets/images/work-dedipya.jpg",
     alt: "Corporate acrylic office board for Dedipya Sheth and Associates in Gandhidham, Gujarat"
   },
   {
@@ -64,7 +64,7 @@ window.SIGNAGE_PROJECTS = [
     category: "Office & Interiors",
     categorySlug: "office-interiors",
     location: "Kutch, Gujarat",
-    img: "assets/images/work-integrated.jpg",
+    img: "/assets/images/work-integrated.jpg",
     alt: "Commercial front-lit signage board for Integrated Service Solutions in Kutch, Gujarat"
   },
   {
@@ -73,7 +73,7 @@ window.SIGNAGE_PROJECTS = [
     category: "Office & Interiors",
     categorySlug: "office-interiors",
     location: "Gandhidham, Gujarat",
-    img: "assets/images/work-wall-of-fame.jpg",
+    img: "/assets/images/work-wall-of-fame.jpg",
     alt: "Interior wall branding and wall of fame acrylic panel in Gandhidham, Gujarat"
   },
   {
@@ -82,7 +82,7 @@ window.SIGNAGE_PROJECTS = [
     category: "Boards",
     categorySlug: "boards",
     location: "Gandhidham, Gujarat",
-    img: "assets/images/work-hermes.jpg",
+    img: "/assets/images/work-hermes.jpg",
     alt: "Acrylic office door plate for Hermes Tradex in Gandhidham, Gujarat"
   },
   {
@@ -91,7 +91,7 @@ window.SIGNAGE_PROJECTS = [
     category: "Glow Signs",
     categorySlug: "glow-signs",
     location: "Kutch, Gujarat",
-    img: "assets/images/work-elysian.jpg",
+    img: "/assets/images/work-elysian.jpg",
     alt: "Architectural building facade LED glow sign for The Elysian in Kutch, Gujarat"
   }
 ];
