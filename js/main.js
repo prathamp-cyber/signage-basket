@@ -318,17 +318,16 @@ document.addEventListener("DOMContentLoaded", () => {
       document.querySelectorAll(".category-row[id]").forEach((row) => {
         const slug = row.id;
         const catData = window.CATALOG[slug];
-        if (catData) {
+        if (catData && catData.page) {
           const btn = row.querySelector(".category-text-panel .btn");
           if (btn) {
             btn.href = catData.page;
-            const catLabel = catData.title.replace(/^Home\s+/i, "");
             btn.title = `Browse ${catData.title}`;
             const spanText = btn.querySelector("span:not(.btn-arrow)");
             if (spanText) {
-              spanText.textContent = `Browse ${catLabel}`;
+              spanText.textContent = `Browse ${catData.title}`;
             } else {
-              btn.innerHTML = `<span>Browse ${catLabel}</span><span class="btn-arrow" aria-hidden="true"><span class="icon i-arrow-right"></span></span>`;
+              btn.innerHTML = `<span>Browse ${catData.title}</span><span class="btn-arrow" aria-hidden="true"><span class="icon i-arrow-right"></span></span>`;
             }
           }
         }

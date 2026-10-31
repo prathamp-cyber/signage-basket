@@ -12,8 +12,6 @@
       SITE_URL: "https://www.signagebasket.in"
     };
 
-    const catalogList = (window.CATALOG && window.CATALOG["home-nameplates"] && window.CATALOG["home-nameplates"].items) || [];
-
     // 1. Resolve design slug from path or search params
     function getDesignSlug() {
       const pathParts = window.location.pathname.replace(/\/+$/, "").split("/");
@@ -26,20 +24,39 @@
     }
 
     const slug = getDesignSlug();
-    const item = catalogList.find((p) => p.slug === slug);
+
+    // Look up slug across ALL CATALOG categories
+    let item = null;
+    let category = null;
+    let categoryKey = null;
+
+    if (window.CATALOG) {
+      for (const catK in window.CATALOG) {
+        const cat = window.CATALOG[catK];
+        if (cat && Array.isArray(cat.items)) {
+          const found = cat.items.find((p) => p.slug === slug);
+          if (found) {
+            item = found;
+            category = cat;
+            categoryKey = catK;
+            break;
+          }
+        }
+      }
+    }
 
     const appContainer = document.getElementById("productApp");
     if (!appContainer) return;
 
     // 2. Unknown slug: Friendly "Design Not Found" state
-    if (!item) {
+    if (!item || !category) {
       document.title = "Design Not Found | Signage Basket";
       appContainer.innerHTML = `
         <div class="product-not-found">
           <h1>Design Not Found</h1>
-          <p>We couldn't find the house nameplate design you're looking for. Explore our full collection of handcrafted designs made in Gandhidham.</p>
-          <a href="/house-nameplates" class="btn btn-primary" title="Browse House Nameplates">
-            <span>Browse House Nameplates</span>
+          <p>We couldn't find the design you're looking for. Explore our full collection of handcrafted signage and nameplates made in Gandhidham.</p>
+          <a href="/collection" class="btn btn-primary" title="Browse Collections">
+            <span>Browse Collections</span>
             <span class="btn-arrow" aria-hidden="true"><span class="icon i-arrow-right"></span></span>
           </a>
         </div>
@@ -47,11 +64,22 @@
       return;
     }
 
+    // Category defaults fallback
+    const catDefaults = category.defaults || {};
+    const finishes = item.finishes || catDefaults.finishes || ["Default finish"];
+    const sizes = item.sizes || catDefaults.sizes || ["Small", "Medium", "Large", "Custom size"];
+    const weather = item.weather || catDefaults.weather || "Suitable for recommended installations. Tell us the location and we will advise.";
+    const care = item.care || catDefaults.care || "Wipe with a soft dry or slightly damp cloth.";
+    const install = item.install || catDefaults.install || "We install on site across Gandhidham, Kutch and Gujarat, or ship with mounting hardware.";
+    const textLabel = item.textLabel || catDefaults.textLabel || "Text on your sign";
+
+    const catSingular = category.title.endsWith("s") && !category.title.endsWith("ss") ? category.title.slice(0, -1) : category.title;
+
     // 3. Dynamic SEO before first paint
     const siteUrl = config.SITE_URL || "https://www.signagebasket.in";
     const canonicalUrl = `${siteUrl}/design/${item.slug}`;
-    const pageTitle = `${item.name} | House Nameplate in Gandhidham | Signage Basket`;
-    const metaDesc = `${item.name} in ${item.material.toLowerCase()}, made to order in Gandhidham. Custom sizes, outdoor finishes and free design preview before we make it.`;
+    const pageTitle = `${item.name} | ${catSingular} in Gandhidham | Signage Basket`;
+    const metaDesc = `${item.name} in ${item.material.toLowerCase()}, made to order in Gandhidham. Custom sizes, finishes and free design preview before we make it.`;
 
     document.title = pageTitle;
 
@@ -92,7 +120,7 @@
       "itemListElement": [
         { "@type": "ListItem", "position": 1, "name": "Home", "item": siteUrl + "/" },
         { "@type": "ListItem", "position": 2, "name": "Collection", "item": siteUrl + "/collection" },
-        { "@type": "ListItem", "position": 3, "name": "House Nameplates", "item": siteUrl + "/house-nameplates" },
+        { "@type": "ListItem", "position": 3, "name": category.title, "item": siteUrl + category.page },
         { "@type": "ListItem", "position": 4, "name": item.name, "item": canonicalUrl }
       ]
     };
@@ -106,7 +134,7 @@
         "@type": "Brand",
         "name": config.brandName || "Signage Basket"
       },
-      "category": "House Nameplates",
+      "category": category.title,
       "url": canonicalUrl
     };
 
@@ -121,17 +149,15 @@
     document.head.appendChild(scriptProd);
 
     // 4. Customizer & Gallery State
-    const finishes = item.finishes || ["Default finish"];
-    const sizes = item.sizes || ["Small", "Medium", "Large", "Custom size"];
     let selectedFinish = finishes[0];
     let selectedSize = sizes[0];
-    let customLines = [...(item.plate && item.plate.lines ? item.plate.lines : ["My Residence"])];
+    let customLines = [...(item.plate && item.plate.lines ? item.plate.lines : [item.name])];
     let currentWallSize = "";
     let activeSlideIndex = 0;
 
     function buildWhatsAppUrl() {
       const waRaw = config.whatsappRaw || "919999999999";
-      const textMsg = `Hi Signage Basket, I am interested in the "${item.name}" (${canonicalUrl}). Finish: ${selectedFinish}, Size: ${selectedSize}, Name: "${customLines.join(" / ")}"${currentWallSize ? `, Wall size: ${currentWallSize}` : ""}. Please share a free design preview and quote.`;
+      const textMsg = `Hi Signage Basket, I am interested in the "${item.name}" (${canonicalUrl}). Finish: ${selectedFinish}, Size: ${selectedSize}, Text: "${customLines.join(" / ")}"${currentWallSize ? `, Wall size: ${currentWallSize}` : ""}. Please share a free design preview and quote.`;
       return `https://wa.me/${waRaw}?text=${encodeURIComponent(textMsg)}`;
     }
 
@@ -151,7 +177,7 @@
           <nav class="product-breadcrumbs" aria-label="Breadcrumb">
             <a href="/">Home</a> / 
             <a href="/collection">Collection</a> / 
-            <a href="/house-nameplates">House Nameplates</a> / 
+            <a href="${category.page}">${category.title}</a> / 
             <span aria-current="page">${item.name}</span>
           </nav>
 
@@ -174,7 +200,7 @@
 
             <!-- Right: Details & Customizer (Sticky on desktop) -->
             <div class="product-details-wrap">
-              <a href="/house-nameplates" class="product-collection-eyebrow">Collection: House Nameplates</a>
+              <a href="${category.page}" class="product-collection-eyebrow">Collection: ${category.title}</a>
               <h1 class="product-title">${item.name}</h1>
               <div class="product-material-sub">${item.material}</div>
               <div class="product-price-row">${priceText}</div>
@@ -206,7 +232,7 @@
               </div>
 
               <div class="customizer-group">
-                <div class="customizer-label">Text on your nameplate</div>
+                <div class="customizer-label">${textLabel}</div>
                 <div class="customizer-inputs-stack" id="lineInputsWrap">
                   ${customLines.map((line, idx) => `
                     <input type="text" class="customizer-text-input" data-line-idx="${idx}"
@@ -216,8 +242,8 @@
               </div>
 
               <div class="customizer-group">
-                <div class="customizer-label">Your wall or door size <span style="font-weight:400;color:var(--muted);text-transform:none;">(optional)</span></div>
-                <input type="text" class="customizer-text-input" id="wallSizeInput" placeholder="e.g. 18 x 12 inches or door panel space">
+                <div class="customizer-label">Your wall or surface size <span style="font-weight:400;color:var(--muted);text-transform:none;">(optional)</span></div>
+                <input type="text" class="customizer-text-input" id="wallSizeInput" placeholder="e.g. 24 x 18 inches or wall width">
               </div>
 
               <!-- Primary Action Block -->
@@ -247,7 +273,7 @@
                     <span class="accordion-icon" aria-hidden="true">+</span>
                   </button>
                   <div class="accordion-content">
-                    <p>${item.material}. Precision crafted using high grade raw materials suitable for architectural residential signage.</p>
+                    <p>${item.material}. Precision crafted using high grade raw materials suitable for architectural signage.</p>
                   </div>
                 </div>
 
@@ -257,17 +283,17 @@
                     <span class="accordion-icon" aria-hidden="true">+</span>
                   </button>
                   <div class="accordion-content">
-                    <p>Made to your size. Choose a size above or tell us your wall size.</p>
+                    <p>Made to your size. Choose a standard size above or specify custom dimensions.</p>
                   </div>
                 </div>
 
                 <div class="accordion-item">
                   <button type="button" class="accordion-header" aria-expanded="false">
-                    <span>Outdoor use</span>
+                    <span>Durability &amp; Weather</span>
                     <span class="accordion-icon" aria-hidden="true">+</span>
                   </button>
                   <div class="accordion-content">
-                    <p>${item.weather}</p>
+                    <p>${weather}</p>
                   </div>
                 </div>
 
@@ -277,7 +303,7 @@
                     <span class="accordion-icon" aria-hidden="true">+</span>
                   </button>
                   <div class="accordion-content">
-                    <p>${item.care}</p>
+                    <p>${care}</p>
                   </div>
                 </div>
 
@@ -287,7 +313,7 @@
                     <span class="accordion-icon" aria-hidden="true">+</span>
                   </button>
                   <div class="accordion-content">
-                    <p>${item.install} <a href="/shipping-installation">See Shipping &amp; Installation</a>.</p>
+                    <p>${install} <a href="/shipping-installation">See Shipping &amp; Installation</a>.</p>
                   </div>
                 </div>
               </div>
@@ -314,7 +340,7 @@
           <div style="text-align:center;max-width:700px;margin:0 auto 2.5rem;">
             <span class="keyword-eyebrow" style="margin-bottom:0.5rem;">Recommendations</span>
             <h2 style="font-size:clamp(24px,2.5vw,34px);margin:0 0 0.5rem;">You may also like</h2>
-            <p style="color:var(--muted);font-size:0.95rem;margin:0;">Handcrafted house nameplate designs from the same studio.</p>
+            <p style="color:var(--muted);font-size:0.95rem;margin:0;">Handcrafted ${category.title.toLowerCase()} designs from the same studio.</p>
           </div>
           <div class="catalog-grid" id="relatedGrid"></div>
         </div>
@@ -325,7 +351,7 @@
         <div class="page-container" style="text-align:center;max-width:720px;">
           <h2 style="font-size:clamp(26px,3vw,38px);margin-bottom:0.75rem;">Can't find your style?</h2>
           <p style="color:var(--muted);font-size:1.05rem;margin-bottom:2rem;">
-            We design custom nameplates to match your home.
+            We design custom signs and nameplates to match your exact vision.
           </p>
           <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
             <a href="/contact" class="btn btn-primary" title="Get a Free Quote">
@@ -615,7 +641,7 @@
           try {
             await navigator.share({
               title: `${item.name} | Signage Basket`,
-              text: `Check out the ${item.name} house nameplate by Signage Basket Gandhidham.`,
+              text: `Check out the ${item.name} design by Signage Basket Gandhidham.`,
               url: window.location.href
             });
           } catch (err) {
@@ -757,16 +783,16 @@
 
         // Build neat WhatsApp quote message
         const waLines = [
-          `Hi Signage Basket, I would like to get a quote for a custom house nameplate:`,
+          `Hi Signage Basket, I would like to get a quote for a custom ${catSingular.toLowerCase()}:`,
           ``,
           `*Design:* ${item.name}`,
           `*Link:* ${canonicalUrl}`,
           `*Finish:* ${selectedFinish}`,
           `*Size:* ${selectedSize}`,
-          `*Text Lines:* ${customLines.join(" / ")}`
+          `*Text:* ${customLines.join(" / ")}`
         ];
 
-        if (currentWallSize) waLines.push(`*Wall / Door Space:* ${currentWallSize}`);
+        if (currentWallSize) waLines.push(`*Wall / Space:* ${currentWallSize}`);
         waLines.push(``);
         waLines.push(`*Customer Details:*`);
         waLines.push(`- Name: ${nameVal}`);
@@ -825,7 +851,7 @@
     const relatedGrid = document.getElementById("relatedGrid");
     if (relatedGrid) {
       const currentTags = item.tags || [];
-      const others = catalogList.filter((p) => p.slug !== item.slug);
+      const others = category.items.filter((p) => p.slug !== item.slug);
 
       // Score items by shared tags
       const scored = others.map((p) => {

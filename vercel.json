@@ -3,8 +3,76 @@
   "trailingSlash": false,
   "rewrites": [
     {
+      "source": "/admin",
+      "destination": "/admin.html"
+    },
+    {
       "source": "/design/:slug",
       "destination": "/product.html"
+    },
+    {
+      "source": "/house-nameplates",
+      "destination": "/category.html"
+    },
+    {
+      "source": "/led-glow-signs",
+      "destination": "/category.html"
+    },
+    {
+      "source": "/3d-letter-signs",
+      "destination": "/category.html"
+    },
+    {
+      "source": "/acrylic-office-boards",
+      "destination": "/category.html"
+    },
+    {
+      "source": "/wall-branding",
+      "destination": "/category.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/admin",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "same-origin"
+        }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "same-origin"
+        }
+      ]
     }
   ]
 }

@@ -70,7 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const waMsg = encodeURIComponent(config.whatsappDefaultMsg || "Hi Signage Basket, I'd like a quote.");
       const waUrl = `https://wa.me/${config.whatsappRaw}?text=${waMsg}`;
       const isHome    = normalizedPath === "/";
-      const isColl    = normalizedPath === "/collection" || normalizedPath === "/house-nameplates";
+      const isColl    = normalizedPath === "/collection" || normalizedPath === "/house-nameplates" || normalizedPath === "/led-glow-signs" || normalizedPath === "/3d-letter-signs" || normalizedPath === "/acrylic-office-boards" || normalizedPath === "/wall-branding";
       const isWork    = normalizedPath === "/our-work";
       const isAbout   = normalizedPath === "/about";
       const isContact = normalizedPath === "/contact";
@@ -96,10 +96,10 @@ document.addEventListener("DOMContentLoaded", () => {
                   </a>
                   <div class="nav-dropdown-menu" role="menu">
                     <a href="/house-nameplates" class="dropdown-item" role="menuitem">Home Nameplates</a>
-                    <a href="/collection#glow-signs" class="dropdown-item" role="menuitem">LED &amp; Glow Signs</a>
-                    <a href="/collection#3d-letters" class="dropdown-item" role="menuitem">3D Letter Signs</a>
-                    <a href="/collection#office-boards" class="dropdown-item" role="menuitem">Acrylic Office Boards</a>
-                    <a href="/collection#wall-branding" class="dropdown-item" role="menuitem">Interior Wall Branding</a>
+                    <a href="/led-glow-signs" class="dropdown-item" role="menuitem">LED &amp; Glow Signs</a>
+                    <a href="/3d-letter-signs" class="dropdown-item" role="menuitem">3D Letter Signs</a>
+                    <a href="/acrylic-office-boards" class="dropdown-item" role="menuitem">Acrylic Office Boards</a>
+                    <a href="/wall-branding" class="dropdown-item" role="menuitem">Interior Wall Branding</a>
                   </div>
                 </div>
 
@@ -158,10 +158,10 @@ document.addEventListener("DOMContentLoaded", () => {
               <a href="/collection" class="mobile-nav-link ${isColl ? 'active' : ''}">Collection</a>
               <div class="mobile-nested-links">
                 <a href="/house-nameplates">Home Nameplates</a>
-                <a href="/collection#glow-signs">LED &amp; Glow Signs</a>
-                <a href="/collection#3d-letters">3D Letter Signs</a>
-                <a href="/collection#office-boards">Acrylic Office Boards</a>
-                <a href="/collection#wall-branding">Interior Wall Branding</a>
+                <a href="/led-glow-signs">LED &amp; Glow Signs</a>
+                <a href="/3d-letter-signs">3D Letter Signs</a>
+                <a href="/acrylic-office-boards">Acrylic Office Boards</a>
+                <a href="/wall-branding">Interior Wall Branding</a>
               </div>
             </div>
             <a href="/our-work" class="mobile-nav-link ${isWork ? 'active' : ''}">Our Work</a>
@@ -262,12 +262,11 @@ document.addEventListener("DOMContentLoaded", () => {
               <div class="footer-seo-inner">
                 <span class="footer-seo-label">Popular searches</span>
                 <a href="/house-nameplates" class="footer-link">House nameplate designs</a>
-                <a href="/collection#home-nameplates" class="footer-link">Nameplate maker in Gandhidham</a>
-                <a href="/collection#glow-signs" class="footer-link">LED glow sign boards in Gujarat</a>
-                <a href="/collection#3d-letters" class="footer-link">3D letter signs</a>
-                <a href="/collection#office-boards" class="footer-link">Office signage &amp; acrylic boards</a>
-                <a href="/collection#wall-branding" class="footer-link">Interior wall branding</a>
-                <a href="/collection#home-nameplates" class="footer-link">House name plate design</a>
+                <a href="/led-glow-signs" class="footer-link">LED glow sign boards</a>
+                <a href="/3d-letter-signs" class="footer-link">3D letter signs</a>
+                <a href="/acrylic-office-boards" class="footer-link">Acrylic office boards</a>
+                <a href="/wall-branding" class="footer-link">Interior wall branding</a>
+                <a href="/collection" class="footer-link">Nameplate maker in Gandhidham</a>
               </div>
             </div>
 
