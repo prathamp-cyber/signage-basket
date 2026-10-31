@@ -1,5 +1,5 @@
 /**
- * Signage Basket — Authentication & Security Utilities
+ * Signage Basket — Authentication & Security (Crypto-based JWT & scrypt)
  */
 const crypto = require('crypto');
 

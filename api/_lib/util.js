@@ -96,7 +96,7 @@ function isValidRating(rating) {
   return Number.isInteger(num) && num >= 1 && num <= 5;
 }
 
-function isValidMediaUrl(url) {
+function isValidImageUrl(url) {
   if (!url || typeof url !== 'string') return false;
   if (url.startsWith('/assets/')) return true;
   if (url.startsWith('https://') && url.includes('.blob.vercel-storage.com/')) return true;
@@ -127,8 +127,8 @@ async function checkRateLimit(db, key, limit, windowSeconds) {
     await col.insertOne({ _id: key, count: 1, expiresAt });
     return true;
   } catch (err) {
-    console.error('Rate limit error:', err);
-    return true; // Fail open if rate limit collection is temporarily unreachable
+    console.error('Rate limit check error:', err);
+    return true;
   }
 }
 
@@ -142,6 +142,6 @@ module.exports = {
   isValidIndianPhone,
   isValidEmail,
   isValidRating,
-  isValidMediaUrl,
+  isValidImageUrl,
   checkRateLimit
 };

@@ -1,5 +1,5 @@
 /**
- * Signage Basket — MongoDB Connection & Collection Accessor
+ * Signage Basket — MongoDB Atlas Connection & Indexes
  */
 const { MongoClient } = require('mongodb');
 
@@ -38,7 +38,7 @@ async function getDb() {
       ]);
       indexesInitialized = true;
     } catch (err) {
-      console.warn('Index initialization warning:', err.message);
+      console.warn('Index initialization notice:', err.message);
     }
   }
 

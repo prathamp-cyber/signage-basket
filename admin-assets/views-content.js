@@ -1,1344 +1,1336 @@
 /**
- * Signage Basket — Views: Designs, Projects, Reviews & Media
+ * Signage Basket — Content Views: Designs, Projects, Reviews & Media
  */
-import { api, esc, formatRelative, showToast, confirmDialog, openDrawer, closeDrawer, setUnsavedChanges } from './core.js';
+import {
+  api,
+  toast,
+  confirmDialog,
+  openModal,
+  openDrawer,
+  h,
+  esc,
+  relTime,
+  fmtDate,
+  chipInput,
+  photoUploader,
+  slugify,
+  go,
+  state,
+  navGuard
+} from './core.js';
 
-// Browser image compression helper: max 1600px, WebP .82 with JPEG fallback
-async function compressImageFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = reject;
-      img.onload = () => {
-        const maxSide = 1600;
-        let w = img.width;
-        let h = img.height;
-        if (w > maxSide || h > maxSide) {
-          if (w > h) {
-            h = Math.round((h * maxSide) / w);
-            w = maxSide;
-          } else {
-            w = Math.round((w * maxSide) / h);
-            h = maxSide;
-          }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
+const CATEGORIES = [
+  { key: 'home-nameplates', label: 'Home Nameplates' },
+  { key: 'glow-signs', label: 'LED & Glow Signs' },
+  { key: '3d-letters', label: '3D Letter Signs' },
+  { key: 'office-boards', label: 'Acrylic Office Boards' },
+  { key: 'wall-branding', label: 'Interior Wall Branding' }
+];
 
-        let dataUrl = canvas.toDataURL('image/webp', 0.82);
-        let contentType = 'image/webp';
-        if (!dataUrl.startsWith('data:image/webp')) {
-          dataUrl = canvas.toDataURL('image/jpeg', 0.82);
-          contentType = 'image/jpeg';
-        }
-
-        const dataBase64 = dataUrl.split(',')[1];
-        resolve({ contentType, dataBase64, filename: file.name });
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-// Upload file to Blob storage
-async function uploadMedia(file, onProgress) {
-  if (onProgress) onProgress(30);
-  const compressed = await compressImageFile(file);
-  if (onProgress) onProgress(70);
-
-  const res = await api('/api/admin/media', {
-    method: 'POST',
-    body: {
-      filename: compressed.filename,
-      contentType: compressed.contentType,
-      dataBase64: compressed.dataBase64
-    }
-  });
-
-  if (onProgress) onProgress(100);
-  return res.url;
-}
-
-// Category mappings
-const CATEGORY_NAMES = {
-  'home-nameplates': 'Home Nameplates',
-  'glow-signs': 'LED & Glow Signs',
-  '3d-letters': '3D Letter Signs',
-  'office-boards': 'Acrylic Office Boards',
-  'wall-branding': 'Interior Wall Branding'
-};
+const CAT_MAP = Object.fromEntries(CATEGORIES.map(c => [c.key, c.label]));
 
 // ==========================================
-// 1. DESIGNS VIEW (Catalog List & Editor)
+// 1. DESIGNS CATALOG
 // ==========================================
-export async function renderDesigns(container, param) {
-  if (param === 'new' || (param && param.length > 0)) {
-    await renderDesignForm(container, param === 'new' ? null : param);
-    return;
-  }
-
-  let activeCategory = 'all';
+export async function renderDesigns(root) {
+  let activeCat = 'all';
   let activeStatus = 'all';
   let searchQuery = '';
 
-  async function loadList() {
-    container.innerHTML = '<div class="skeleton" style="height: 350px; width: 100%;"></div>';
+  async function load() {
+    root.innerHTML = '';
+    root.appendChild(h('div', { class: 'skeleton', style: 'height:360px; width:100%;' }));
 
     try {
-      const url = `/api/admin/designs?category=${encodeURIComponent(activeCategory)}&status=${encodeURIComponent(activeStatus)}&q=${encodeURIComponent(searchQuery)}`;
+      const url = `/api/admin/designs?category=${encodeURIComponent(activeCat)}&status=${encodeURIComponent(activeStatus)}&q=${encodeURIComponent(searchQuery)}`;
       const res = await api(url);
       const items = res.items || [];
 
-      container.innerHTML = `
-        <!-- Filter Tabs -->
-        <div class="filter-tabs">
-          <button class="filter-tab ${activeCategory === 'all' ? 'active' : ''}" data-cat="all">All Designs</button>
-          ${Object.entries(CATEGORY_NAMES).map(([slug, label]) => `
-            <button class="filter-tab ${activeCategory === slug ? 'active' : ''}" data-cat="${slug}">${label}</button>
-          `).join('')}
-        </div>
+      root.innerHTML = '';
 
-        <!-- Toolbar -->
-        <div class="toolbar">
-          <div class="toolbar-search">
-            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" id="designSearchInput" class="form-input" placeholder="Search designs by name, material..." value="${esc(searchQuery)}">
-          </div>
+      // Category Tabs Bar
+      const tabsBar = h('div', { class: 'tabs-bar' });
+      const allTab = h('button', {
+        class: `tab-btn ${activeCat === 'all' ? 'active' : ''}`,
+        onclick: () => { activeCat = 'all'; load(); }
+      }, 'All');
+      tabsBar.appendChild(allTab);
 
-          <div style="display: flex; gap: 12px; align-items: center;">
-            <select id="designStatusFilter" class="form-select" style="width: auto;">
-              <option value="all" ${activeStatus === 'all' ? 'selected' : ''}>All Status</option>
-              <option value="published" ${activeStatus === 'published' ? 'selected' : ''}>Published</option>
-              <option value="draft" ${activeStatus === 'draft' ? 'selected' : ''}>Draft</option>
-            </select>
-
-            <a href="#/designs/new" class="btn btn-ink">
-              <svg class="svg-icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              <span>Add Design</span>
-            </a>
-          </div>
-        </div>
-
-        <!-- Catalog Grid -->
-        ${items.length === 0 ? `
-          <div class="card empty-state">
-            <h3>No designs found</h3>
-            <p>Start by adding your first design or import starter designs in Settings.</p>
-            <div style="margin-top: 16px;">
-              <a href="#/designs/new" class="btn btn-ink btn-sm">Add Design</a>
-            </div>
-          </div>
-        ` : `
-          <div class="catalog-grid">
-            ${items.map(d => {
-              const coverUrl = d.images && d.images[0] ? d.images[0].url : '';
-              let plateHtml = '';
-              if (!coverUrl && d.plate && typeof window.renderPlate === 'function') {
-                try {
-                  plateHtml = window.renderPlate(d.plate, { zoom: 0.5 });
-                } catch (_) {}
-              }
-
-              return `
-                <div class="catalog-card" data-id="${d._id}">
-                  <div class="card-media">
-                    ${coverUrl ? `<img src="${esc(coverUrl)}" alt="${esc(d.name)}" loading="lazy">` : (plateHtml ? `<div style="width:100%; height:100%; transform: scale(0.65); transform-origin: center center;">${plateHtml}</div>` : `<div style="color:var(--text-muted); font-size:13px;">No Photo</div>`)}
-                    <div class="card-badges">
-                      <span class="status-pill status-${esc(d.status)}">${esc(d.status)}</span>
-                      ${d.featured ? `<span class="badge-featured">Featured</span>` : ''}
-                    </div>
-                  </div>
-                  <div class="card-body">
-                    <span class="card-eyebrow">${esc(CATEGORY_NAMES[d.category] || d.category)}</span>
-                    <h3 class="card-title">${esc(d.name)}</h3>
-                    <p class="card-meta">${esc(d.material || 'Custom crafted')}</p>
-                    <div style="font-weight: 600; font-size: 14px; margin-bottom: 12px; color: var(--bronze);">
-                      ${d.price ? `₹${d.price.toLocaleString('en-IN')}` : 'Price on request'}
-                    </div>
-
-                    <div class="card-actions">
-                      <a href="#/designs/${d._id}" class="btn btn-outline btn-sm" title="Edit">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        <span>Edit</span>
-                      </a>
-                      <button class="btn btn-outline btn-sm btn-duplicate" data-id="${d._id}" title="Duplicate">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                      </button>
-                      <button class="btn btn-outline btn-sm btn-toggle-publish" data-id="${d._id}" data-status="${d.status}" title="${d.status === 'published' ? 'Unpublish' : 'Publish'}">
-                        ${d.status === 'published' ? `Unpublish` : `Publish`}
-                      </button>
-                      <button class="btn btn-outline btn-sm btn-delete" data-id="${d._id}" title="Delete" style="margin-left: auto; color: var(--danger);">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              `;
-            }).join('')}
-          </div>
-        `}
-      `;
-
-      // Category tab switching
-      container.querySelectorAll('.filter-tab').forEach(b => {
-        b.onclick = () => {
-          activeCategory = b.getAttribute('data-cat');
-          loadList();
-        };
+      CATEGORIES.forEach(c => {
+        const btn = h('button', {
+          class: `tab-btn ${activeCat === c.key ? 'active' : ''}`,
+          onclick: () => { activeCat = c.key; load(); }
+        }, c.label);
+        tabsBar.appendChild(btn);
       });
 
-      // Status dropdown
-      const statusFilter = container.querySelector('#designStatusFilter');
-      if (statusFilter) {
-        statusFilter.onchange = () => {
-          activeStatus = statusFilter.value;
-          loadList();
-        };
-      }
+      // Search & Actions Toolbar
+      const searchInput = h('input', {
+        type: 'text',
+        class: 'form-input',
+        style: 'max-width:280px;',
+        placeholder: 'Search designs by name, material...',
+        value: searchQuery
+      });
 
-      // Search debounce
-      const sInput = container.querySelector('#designSearchInput');
-      let searchTimer;
-      sInput.oninput = () => {
-        clearTimeout(searchTimer);
-        searchTimer = setTimeout(() => {
-          searchQuery = sInput.value.trim();
-          loadList();
+      let timer;
+      searchInput.oninput = () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          searchQuery = searchInput.value.trim();
+          load();
         }, 300);
       };
 
-      // Per-card: Duplicate
-      container.querySelectorAll('.btn-duplicate').forEach(btn => {
-        btn.onclick = async () => {
-          const id = btn.getAttribute('data-id');
-          try {
-            await api(`/api/admin/designs/${id}/duplicate`, { method: 'POST' });
-            showToast('Design duplicated into draft', 'success');
-            loadList();
-          } catch (err) {
-            showToast(err.message, 'error');
-          }
-        };
-      });
+      const statusSelect = h('select', { class: 'form-select', style: 'width:auto;' },
+        h('option', { value: 'all', selected: activeStatus === 'all', text: 'All Status' }),
+        h('option', { value: 'published', selected: activeStatus === 'published', text: 'Published' }),
+        h('option', { value: 'draft', selected: activeStatus === 'draft', text: 'Draft' })
+      );
+      statusSelect.onchange = () => {
+        activeStatus = statusSelect.value;
+        load();
+      };
 
-      // Per-card: Publish / Unpublish Toggle
-      container.querySelectorAll('.btn-toggle-publish').forEach(btn => {
-        btn.onclick = async () => {
-          const id = btn.getAttribute('data-id');
-          const currentStatus = btn.getAttribute('data-status');
-          const newStatus = currentStatus === 'published' ? 'draft' : 'published';
-          try {
-            await api(`/api/admin/designs/${id}`, {
-              method: 'PUT',
-              body: { status: newStatus }
-            });
-            showToast(`Design marked as ${newStatus}`, 'success');
-            loadList();
-          } catch (err) {
-            showToast(err.message, 'error');
-          }
-        };
-      });
+      const addBtn = h('button', {
+        class: 'btn btn-ink btn-sm',
+        onclick: () => go('designs/new')
+      },
+        h('span', { class: 'icon i-plate' }),
+        h('span', { text: '+ Add design' })
+      );
 
-      // Per-card: Delete
-      container.querySelectorAll('.btn-delete').forEach(btn => {
-        btn.onclick = async () => {
-          const id = btn.getAttribute('data-id');
-          const ok = await confirmDialog({
-            title: 'Delete Design',
-            message: 'Are you sure you want to delete this design? This cannot be undone.',
-            confirmText: 'Delete',
-            danger: true
-          });
-          if (ok) {
+      const toolbar = h('div', {
+        style: 'display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px;'
+      },
+        h('div', { style: 'display:flex; gap:10px; align-items:center; flex-wrap:wrap;' }, searchInput, statusSelect),
+        addBtn
+      );
+
+      // Card Grid
+      const grid = h('div', { class: 'catalog-grid' });
+
+      if (items.length === 0) {
+        const empty = h('div', { class: 'card', style: 'text-align:center; padding:48px 24px; grid-column: 1 / -1;' },
+          h('h3', { text: 'No designs found in this category' }),
+          h('p', { class: 'form-hint', text: 'Add a custom design or import handcrafted starters from the dashboard.', style: 'margin:8px 0 20px;' }),
+          h('div', { style: 'display:flex; gap:10px; justify-content:center; flex-wrap:wrap;' },
+            h('button', { class: 'btn btn-ink btn-sm', onclick: () => go('designs/new') }, 'Add your first design'),
+            h('button', { class: 'btn btn-outline btn-sm', onclick: () => go('dashboard') }, 'Import starter designs')
+          )
+        );
+        grid.appendChild(empty);
+      } else {
+        items.forEach(item => {
+          const card = h('div', { class: 'catalog-card' });
+
+          // Media container: Cover photo or drawn plate or initials
+          const mediaEl = h('div', { class: 'card-media' });
+          if (item.images && item.images.length > 0 && item.images[0].url) {
+            mediaEl.appendChild(h('img', { src: item.images[0].url, alt: item.name, loading: 'lazy' }));
+          } else if (item.plate && typeof window.renderPlate === 'function') {
             try {
-              await api(`/api/admin/designs/${id}`, { method: 'DELETE' });
-              showToast('Design deleted', 'info');
-              loadList();
-            } catch (err) {
-              showToast(err.message, 'error');
+              const plateHtml = window.renderPlate(item.plate, { zoom: 0.6 });
+              mediaEl.innerHTML = `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; transform:scale(0.65);">${plateHtml}</div>`;
+            } catch (_) {
+              renderInitialsFallback(mediaEl, item.name);
             }
+          } else {
+            renderInitialsFallback(mediaEl, item.name);
           }
-        };
-      });
 
+          // Badges
+          const badgesEl = h('div', { class: 'card-badges' });
+          if (item.status === 'draft') {
+            badgesEl.appendChild(h('span', { class: 'status-pill status-draft', text: 'Draft' }));
+          }
+          if (item.featured) {
+            badgesEl.appendChild(h('span', { class: 'badge-featured', text: 'Featured' }));
+          }
+          mediaEl.appendChild(badgesEl);
+
+          // Card Body
+          const bodyEl = h('div', { class: 'card-body' },
+            h('span', { class: 'card-eyebrow', text: CAT_MAP[item.category] || item.category }),
+            h('h3', { class: 'card-title', text: item.name }),
+            h('p', { class: 'card-meta', text: item.material || 'Handcrafted' }),
+            h('div', {
+              style: 'font-weight:600; font-size:14px; color:var(--bronze); margin-bottom:12px;',
+              text: item.price !== null && item.price !== undefined ? `₹${Number(item.price).toLocaleString('en-IN')}` : 'Price on request'
+            })
+          );
+
+          // Actions
+          const editBtn = h('button', {
+            class: 'btn btn-outline btn-sm',
+            onclick: () => go(`designs/${item._id}`)
+          }, 'Edit');
+
+          const dupBtn = h('button', {
+            class: 'btn btn-outline btn-sm',
+            title: 'Duplicate',
+            onclick: async () => {
+              try {
+                await api(`/api/admin/designs/${item._id}/duplicate`, { method: 'POST' });
+                toast('Design duplicated to drafts', 'success');
+                load();
+              } catch (err) {
+                toast(err.message, 'error');
+              }
+            }
+          }, 'Duplicate');
+
+          const isPub = item.status === 'published';
+          const pubBtn = h('button', {
+            class: 'btn btn-outline btn-sm',
+            onclick: async () => {
+              try {
+                await api(`/api/admin/designs/${item._id}`, {
+                  method: 'PUT',
+                  body: { status: isPub ? 'draft' : 'published' }
+                });
+                toast(`Marked as ${isPub ? 'draft' : 'published'}`, 'success');
+                load();
+              } catch (err) {
+                toast(err.message, 'error');
+              }
+            }
+          }, isPub ? 'Unpublish' : 'Publish');
+
+          const delBtn = h('button', {
+            class: 'btn btn-outline btn-sm',
+            style: 'color:var(--danger); margin-left:auto;',
+            title: 'Delete design',
+            onclick: async () => {
+              const ok = await confirmDialog({
+                title: 'Delete Design',
+                message: `Permanently delete "${item.name}"? This cannot be undone.`,
+                confirmText: 'Delete',
+                danger: true
+              });
+              if (ok) {
+                try {
+                  await api(`/api/admin/designs/${item._id}`, { method: 'DELETE' });
+                  toast('Design deleted', 'info');
+                  load();
+                } catch (err) {
+                  toast(err.message, 'error');
+                }
+              }
+            }
+          }, '✕');
+
+          const actionsEl = h('div', { class: 'card-actions' }, editBtn, dupBtn, pubBtn, delBtn);
+          bodyEl.appendChild(actionsEl);
+
+          card.append(mediaEl, bodyEl);
+          grid.appendChild(card);
+        });
+      }
+
+      root.append(tabsBar, toolbar, grid);
     } catch (err) {
-      container.innerHTML = `<div class="card"><p class="form-error">Failed to load designs: ${esc(err.message)}</p></div>`;
+      root.innerHTML = '';
+      root.appendChild(h('div', { class: 'card' }, h('p', { class: 'form-error', text: err.message })));
     }
   }
 
-  await loadList();
+  await load();
 }
 
-// ------------------------------------------
-// DESIGN FORM (Add / Edit + Live Sticky Preview)
-// ------------------------------------------
-async function renderDesignForm(container, designId) {
-  let design = null;
-  if (designId) {
+function renderInitialsFallback(parent, name = '') {
+  const letters = (name || 'SB').split(/\s+/).slice(0, 2).map(s => s[0]).join('').toUpperCase();
+  const box = h('div', {
+    style: 'width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#e8e8e8; color:#777; font-weight:700; font-size:24px;'
+  }, letters);
+  parent.appendChild(box);
+}
+
+// ==========================================
+// 2. DESIGN EDITOR FORM (Add / Edit + Live Sticky Preview)
+// ==========================================
+export async function renderDesignForm(root, id = null) {
+  root.innerHTML = '';
+  root.appendChild(h('div', { class: 'skeleton', style: 'height:400px; width:100%;' }));
+
+  let existing = null;
+  if (id) {
     try {
-      const res = await api(`/api/admin/designs/${designId}`);
-      design = res.item;
+      const res = await api(`/api/admin/designs/${id}`).catch(async () => {
+        const list = await api('/api/admin/designs');
+        return { item: (list.items || []).find(i => String(i._id) === id) };
+      });
+      existing = res.item;
     } catch (err) {
-      showToast('Failed to load design: ' + err.message, 'error');
-      location.hash = '#/designs';
+      toast(`Failed to load design: ${err.message}`, 'error');
+      go('designs');
       return;
     }
   }
 
-  const isEdit = Boolean(design);
-  let tags = design?.tags ? [...design.tags] : [];
-  let finishes = design?.finishes ? [...design.finishes] : ['Antique brass', 'Polished brass'];
-  let sizes = design?.sizes ? [...design.sizes] : ['Small', 'Medium', 'Large', 'Custom'];
-  let images = design?.images ? [...design.images] : [];
-  let plate = design?.plate || null;
+  root.innerHTML = '';
 
-  container.innerHTML = `
-    <div style="margin-bottom: 24px;">
-      <a href="#/designs" class="btn btn-outline btn-sm">
-        <svg class="svg-icon" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-        <span>Back to Designs</span>
-      </a>
-    </div>
+  const isEdit = Boolean(existing);
+  let isDirty = false;
+  navGuard(() => {
+    if (!isDirty) return true;
+    return confirm('You have unsaved changes. Discard them?');
+  });
 
-    <div class="form-preview-layout">
-      <!-- Left Column: Form Fields -->
-      <div class="card">
-        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 20px;">
-          ${isEdit ? 'Edit Design' : 'Create New Design'}
-        </h2>
+  // State buffers
+  let photos = existing?.images ? [...existing.images] : [];
+  const plateBackup = existing?.plate || null;
+  let statusVal = existing?.status || 'published';
 
-        <form id="designEditorForm">
-          <!-- Name -->
-          <div class="form-group">
-            <label class="form-label" for="designName">Design Name *</label>
-            <input type="text" id="designName" class="form-input" required maxlength="150" value="${esc(design?.name || '')}" placeholder="e.g. Round Brass House Number Plate">
-            <div id="nameError" class="form-error" style="display:none;"></div>
-          </div>
+  // Back button
+  const topNav = h('div', { style: 'margin-bottom:20px;' },
+    h('button', {
+      class: 'btn btn-outline btn-sm',
+      onclick: () => { isDirty = false; go('designs'); }
+    }, '← Back to Designs')
+  );
 
-          <!-- Category -->
-          <div class="form-group">
-            <label class="form-label" for="designCategory">Category *</label>
-            <select id="designCategory" class="form-select" required>
-              ${Object.entries(CATEGORY_NAMES).map(([slug, label]) => `
-                <option value="${slug}" ${design?.category === slug ? 'selected' : ''}>${label}</option>
-              `).join('')}
-            </select>
-          </div>
+  // Form Fields
+  const nameInp = h('input', {
+    type: 'text',
+    class: 'form-input',
+    required: true,
+    placeholder: 'e.g. Modern Brass Villa Nameplate',
+    value: existing?.name || ''
+  });
+  const nameErr = h('div', { class: 'form-error', style: 'display:none;' });
 
-          <!-- Slug -->
-          <div class="form-group">
-            <label class="form-label" for="designSlug">URL Slug *</label>
-            <input type="text" id="designSlug" class="form-input" required pattern="^[a-z0-9-]{2,80}$" value="${esc(design?.slug || '')}" placeholder="round-brass-house-number-plate">
-            <div class="form-hint">Path: /design/<span id="slugPreview">${esc(design?.slug || 'slug')}</span></div>
-            <div id="slugError" class="form-error" style="display:none;"></div>
-          </div>
+  const catSelect = h('select', { class: 'form-select', required: true },
+    CATEGORIES.map(c => h('option', { value: c.key, selected: existing?.category === c.key, text: c.label }))
+  );
 
-          <!-- Material -->
-          <div class="form-group">
-            <label class="form-label" for="designMaterial">Material / Build Spec</label>
-            <input type="text" id="designMaterial" class="form-input" maxlength="100" value="${esc(design?.material || '')}" placeholder="e.g. Brass finish on solid acrylic base">
-          </div>
+  let slugManual = isEdit;
+  const slugInp = h('input', {
+    type: 'text',
+    class: 'form-input',
+    required: true,
+    placeholder: 'modern-brass-villa-nameplate',
+    value: existing?.slug || ''
+  });
+  const slugErr = h('div', { class: 'form-error', style: 'display:none;' });
 
-          <!-- Description -->
-          <div class="form-group">
-            <div style="display: flex; justify-content: space-between;">
-              <label class="form-label" for="designDesc">Short Description</label>
-              <span id="descCount" style="font-size: 12px; color: var(--text-muted);">0 / 400</span>
-            </div>
-            <textarea id="designDesc" class="form-textarea" rows="3" maxlength="400" placeholder="A brief craft note shown on the product card...">${esc(design?.desc || '')}</textarea>
-          </div>
+  nameInp.oninput = () => {
+    isDirty = true;
+    if (!slugManual) {
+      slugInp.value = slugify(nameInp.value);
+    }
+    updatePreview();
+  };
 
-          <!-- Tags -->
-          <div class="form-group">
-            <label class="form-label">Filter Tags</label>
-            <div id="tagsChipBox" class="chip-container">
-              <input type="text" id="tagInput" placeholder="Type tag & press Enter...">
-            </div>
-            <div id="tagSuggestions" class="chip-suggestions"></div>
-          </div>
-
-          <!-- Finishes -->
-          <div class="form-group">
-            <label class="form-label">Available Finishes</label>
-            <div id="finishesChipBox" class="chip-container">
-              <input type="text" id="finishInput" placeholder="Add finish & press Enter...">
-            </div>
-          </div>
-
-          <!-- Sizes -->
-          <div class="form-group">
-            <label class="form-label">Standard Sizes</label>
-            <div id="sizesChipBox" class="chip-container">
-              <input type="text" id="sizeInput" placeholder="Add size & press Enter...">
-            </div>
-          </div>
-
-          <!-- Price -->
-          <div class="form-group">
-            <label class="form-label" for="designPrice">Starting Price (₹)</label>
-            <input type="number" id="designPrice" class="form-input" min="0" step="1" value="${design?.price || ''}" placeholder="Leave empty for 'Price on request'">
-            <div class="form-hint">Leave empty to display "Price on request" on the website.</div>
-          </div>
-
-          <!-- Photos Uploader -->
-          <div class="form-group">
-            <label class="form-label">Product Photos</label>
-            <div id="photoDropzone" class="dropzone">
-              <svg class="svg-icon" style="width: 32px; height: 32px; margin-bottom: 8px; color: var(--text-muted);" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              <p>Drag photos here or <span style="text-decoration: underline; color: var(--bronze);">browse files</span></p>
-              <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Compressed to WebP max 1600px automatically</p>
-              <input type="file" id="photoFileInput" multiple accept="image/jpeg,image/png,image/webp" style="display: none;">
-            </div>
-            <div id="uploadProgressBar" class="checklist-progress-bar" style="display: none; margin-top: 10px;">
-              <div id="uploadProgressFill" class="checklist-progress-fill" style="width: 0%;"></div>
-            </div>
-            <div id="photosList" class="photo-list"></div>
-          </div>
-
-          <!-- Toggles: Status & Featured -->
-          <div style="display: flex; gap: 24px; margin-bottom: 24px; flex-wrap: wrap;">
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-              <input type="checkbox" id="designPublished" ${design?.status === 'published' ? 'checked' : (!isEdit ? 'checked' : '')}>
-              <span style="font-weight: 600; font-size: 14px;">Publish on Website</span>
-            </label>
-
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-              <input type="checkbox" id="designFeatured" ${design?.featured ? 'checked' : ''}>
-              <span style="font-weight: 600; font-size: 14px;">Feature on Homepage</span>
-            </label>
-          </div>
-
-          <!-- Form Actions -->
-          <div style="display: flex; gap: 12px; border-top: 1px solid var(--border); padding-top: 20px;">
-            <button type="submit" id="btnSaveDesign" class="btn btn-ink">
-              <span>Save Design</span>
-            </button>
-            ${!isEdit ? `
-              <button type="button" id="btnSaveAndAddAnother" class="btn btn-outline">
-                <span>Save & Add Another</span>
-              </button>
-            ` : ''}
-            <a href="#/designs" class="btn btn-outline">Cancel</a>
-          </div>
-        </form>
-      </div>
-
-      <!-- Right Column: Sticky Live Preview -->
-      <div class="sticky-preview">
-        <div class="preview-box">
-          <div class="preview-label">Website Card Preview</div>
-          <div class="card-media" id="previewMediaBox">
-            <div style="color: var(--text-muted); font-size: 13px;">No Photo</div>
-          </div>
-          <div class="card-body">
-            <span class="card-eyebrow" id="previewCategory">Category</span>
-            <h3 class="card-title" id="previewTitle">Design Name</h3>
-            <p class="card-meta" id="previewMaterial">Material Spec</p>
-            <div style="font-weight: 600; font-size: 14px; color: var(--bronze);" id="previewPrice">
-              Price on request
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-
-  setUnsavedChanges(true);
-
-  // Form Elements
-  const form = container.querySelector('#designEditorForm');
-  const nameInput = container.querySelector('#designName');
-  const catSelect = container.querySelector('#designCategory');
-  const slugInput = container.querySelector('#designSlug');
-  const slugPreview = container.querySelector('#slugPreview');
-  const materialInput = container.querySelector('#designMaterial');
-  const descInput = container.querySelector('#designDesc');
-  const descCount = container.querySelector('#descCount');
-  const priceInput = container.querySelector('#designPrice');
-  const publishedCheckbox = container.querySelector('#designPublished');
-  const featuredCheckbox = container.querySelector('#designFeatured');
-
-  // Preview Elements
-  const previewMediaBox = container.querySelector('#previewMediaBox');
-  const previewCategory = container.querySelector('#previewCategory');
-  const previewTitle = container.querySelector('#previewTitle');
-  const previewMaterial = container.querySelector('#previewMaterial');
-  const previewPrice = container.querySelector('#previewPrice');
-
-  function updateLivePreview() {
-    previewCategory.textContent = CATEGORY_NAMES[catSelect.value] || catSelect.value;
-    previewTitle.textContent = nameInput.value || 'Design Name';
-    previewMaterial.textContent = materialInput.value || 'Material Spec';
-    const p = priceInput.value.trim();
-    previewPrice.textContent = p ? `₹${Number(p).toLocaleString('en-IN')}` : 'Price on request';
-
-    if (images.length > 0) {
-      previewMediaBox.innerHTML = `<img src="${esc(images[0].url)}" alt="${esc(images[0].alt || nameInput.value)}">`;
-    } else if (plate && typeof window.renderPlate === 'function') {
-      try {
-        previewMediaBox.innerHTML = `<div style="width:100%; height:100%; transform: scale(0.65); transform-origin: center center;">${window.renderPlate(plate)}</div>`;
-      } catch (_) {
-        previewMediaBox.innerHTML = `<div style="color:var(--text-muted); font-size:13px;">No Photo</div>`;
-      }
+  slugInp.oninput = () => {
+    isDirty = true;
+    slugManual = true;
+    const v = slugInp.value.trim();
+    if (v && !/^[a-z0-9-]{2,80}$/.test(v)) {
+      slugErr.textContent = 'Slug must be 2-80 characters using only lowercase letters, numbers, and hyphens';
+      slugErr.style.display = 'block';
     } else {
-      previewMediaBox.innerHTML = `<div style="color:var(--text-muted); font-size:13px;">No Photo</div>`;
+      slugErr.style.display = 'none';
     }
-  }
-
-  // Name to auto slug generator
-  let slugManuallyEdited = isEdit;
-  nameInput.oninput = () => {
-    if (!slugManuallyEdited) {
-      slugInput.value = nameInput.value.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').slice(0, 80);
-      slugPreview.textContent = slugInput.value || 'slug';
-    }
-    updateLivePreview();
   };
 
-  slugInput.oninput = () => {
-    slugManuallyEdited = true;
-    slugPreview.textContent = slugInput.value || 'slug';
-  };
+  const matInp = h('input', {
+    type: 'text',
+    class: 'form-input',
+    placeholder: 'e.g. Brass finish, outdoor lacquered',
+    value: existing?.material || ''
+  });
+  matInp.oninput = () => { isDirty = true; updatePreview(); };
 
-  catSelect.onchange = () => {
-    updateLivePreview();
-    updateTagSuggestions();
-  };
-  materialInput.oninput = updateLivePreview;
-  priceInput.oninput = updateLivePreview;
-
-  // Description character counter
-  descInput.oninput = () => {
-    descCount.textContent = `${descInput.value.length} / 400`;
-  };
-  descCount.textContent = `${descInput.value.length} / 400`;
-
-  // Chip helpers
-  function renderChips(containerEl, list, onRemove) {
-    containerEl.querySelectorAll('.chip').forEach(c => c.remove());
-    list.forEach((item, idx) => {
-      const chip = document.createElement('span');
-      chip.className = 'chip';
-      chip.innerHTML = `${esc(item)}<button type="button" class="chip-remove" data-idx="${idx}">×</button>`;
-      containerEl.insertBefore(chip, containerEl.querySelector('input'));
-    });
-    containerEl.querySelectorAll('.chip-remove').forEach(btn => {
-      btn.onclick = () => {
-        const idx = parseInt(btn.getAttribute('data-idx'), 10);
-        onRemove(idx);
-      };
-    });
-  }
-
-  // Tag Chips Setup
-  const tagsBox = container.querySelector('#tagsChipBox');
-  const tagInput = container.querySelector('#tagInput');
-  const tagSuggestionsEl = container.querySelector('#tagSuggestions');
-
-  function updateTagSuggestions() {
-    tagSuggestionsEl.innerHTML = '';
-    const catalogData = window.CATALOG && window.CATALOG[catSelect.value];
-    if (catalogData && catalogData.filters) {
-      catalogData.filters.forEach(f => {
-        if (f.tag !== 'all' && !tags.includes(f.tag)) {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'chip-suggest-btn';
-          btn.textContent = `+ ${f.label}`;
-          btn.onclick = () => {
-            tags.push(f.tag);
-            renderChips(tagsBox, tags, (i) => { tags.splice(i, 1); updateTagSuggestions(); });
-            updateTagSuggestions();
-          };
-          tagSuggestionsEl.appendChild(btn);
-        }
+  // Tags chip input with suggestions
+  function getSuggestions(catKey) {
+    const list = [];
+    const catData = window.CATALOG && window.CATALOG[catKey];
+    if (catData && Array.isArray(catData.filters)) {
+      catData.filters.forEach(f => {
+        if (f.tag && f.tag !== 'all') list.push(f.tag);
       });
     }
+    return list;
   }
 
-  tagInput.onkeydown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const val = tagInput.value.trim().toLowerCase();
-      if (val && !tags.includes(val)) {
-        tags.push(val);
-        tagInput.value = '';
-        renderChips(tagsBox, tags, (i) => { tags.splice(i, 1); updateTagSuggestions(); });
-        updateTagSuggestions();
-      }
-    }
+  const tagsChips = chipInput({
+    values: existing?.tags || [],
+    suggestions: getSuggestions(catSelect.value),
+    placeholder: 'Add tag...',
+    onChange: () => { isDirty = true; }
+  });
+
+  catSelect.onchange = () => {
+    isDirty = true;
+    updatePreview();
   };
 
-  renderChips(tagsBox, tags, (i) => { tags.splice(i, 1); updateTagSuggestions(); });
-  updateTagSuggestions();
-
-  // Finishes Chips Setup
-  const finishesBox = container.querySelector('#finishesChipBox');
-  const finishInput = container.querySelector('#finishInput');
-  finishInput.onkeydown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const val = finishInput.value.trim();
-      if (val && !finishes.includes(val)) {
-        finishes.push(val);
-        finishInput.value = '';
-        renderChips(finishesBox, finishes, (i) => finishes.splice(i, 1));
-      }
-    }
+  // Description with character counter
+  const descInp = h('textarea', {
+    class: 'form-textarea',
+    rows: 3,
+    maxlength: 400,
+    placeholder: 'Craftsmanship note, weather endurance and installation overview...',
+    value: existing?.desc || ''
+  });
+  const descCount = h('span', { class: 'form-hint', text: `${descInp.value.length} / 400` });
+  descInp.oninput = () => {
+    isDirty = true;
+    descCount.textContent = `${descInp.value.length} / 400`;
   };
-  renderChips(finishesBox, finishes, (i) => finishes.splice(i, 1));
 
-  // Sizes Chips Setup
-  const sizesBox = container.querySelector('#sizesChipBox');
-  const sizeInput = container.querySelector('#sizeInput');
-  sizeInput.onkeydown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const val = sizeInput.value.trim();
-      if (val && !sizes.includes(val)) {
-        sizes.push(val);
-        sizeInput.value = '';
-        renderChips(sizesBox, sizes, (i) => sizes.splice(i, 1));
-      }
+  // Finishes & Sizes
+  const finishesChips = chipInput({
+    values: existing?.finishes || ['Antique brass', 'Polished brass'],
+    placeholder: 'Add finish...',
+    onChange: () => { isDirty = true; }
+  });
+
+  const sizesChips = chipInput({
+    values: existing?.sizes || ['Small (12x6 in)', 'Medium (16x8 in)', 'Large (20x10 in)', 'Custom size'],
+    placeholder: 'Add size...',
+    onChange: () => { isDirty = true; }
+  });
+
+  // Price
+  const priceInp = h('input', {
+    type: 'number',
+    class: 'form-input',
+    min: 0,
+    step: 1,
+    placeholder: 'e.g. 3500',
+    value: existing?.price !== null && existing?.price !== undefined ? existing.price : ''
+  });
+  priceInp.oninput = () => { isDirty = true; updatePreview(); };
+
+  // Photos Uploader
+  const uploader = photoUploader({
+    images: photos,
+    max: 15,
+    onChange: (newImgs) => {
+      isDirty = true;
+      photos = newImgs;
+      updatePreview();
     }
-  };
-  renderChips(sizesBox, sizes, (i) => sizes.splice(i, 1));
+  });
 
-  // Photos Uploader Setup
-  const dropzone = container.querySelector('#photoDropzone');
-  const fileInput = container.querySelector('#photoFileInput');
-  const progressBar = container.querySelector('#uploadProgressBar');
-  const progressFill = container.querySelector('#uploadProgressFill');
-  const photosList = container.querySelector('#photosList');
+  // Status Segmented Toggle
+  const pubToggleBtn = h('button', {
+    type: 'button',
+    class: `btn ${statusVal === 'published' ? 'btn-ink' : 'btn-outline'} btn-sm`,
+    onclick: () => {
+      isDirty = true;
+      statusVal = 'published';
+      pubToggleBtn.className = 'btn btn-ink btn-sm';
+      draftToggleBtn.className = 'btn btn-outline btn-sm';
+    }
+  }, 'Published');
 
-  function renderPhotos() {
-    photosList.innerHTML = images.map((img, idx) => `
-      <div class="photo-item" data-idx="${idx}">
-        <img src="${esc(img.url)}" alt="${esc(img.alt || '')}">
-        ${idx === 0 ? `<span class="photo-badge-cover">Cover</span>` : ''}
-        <div class="photo-actions">
-          ${idx > 0 ? `<button type="button" class="photo-action-btn btn-move-up" data-idx="${idx}" title="Move left">◀</button>` : ''}
-          ${idx < images.length - 1 ? `<button type="button" class="photo-action-btn btn-move-down" data-idx="${idx}" title="Move right">▶</button>` : ''}
-          <button type="button" class="photo-action-btn btn-remove-photo" data-idx="${idx}" title="Remove">✕</button>
-        </div>
-      </div>
-    `).join('');
+  const draftToggleBtn = h('button', {
+    type: 'button',
+    class: `btn ${statusVal === 'draft' ? 'btn-ink' : 'btn-outline'} btn-sm`,
+    onclick: () => {
+      isDirty = true;
+      statusVal = 'draft';
+      draftToggleBtn.className = 'btn btn-ink btn-sm';
+      pubToggleBtn.className = 'btn btn-outline btn-sm';
+    }
+  }, 'Draft');
 
-    photosList.querySelectorAll('.btn-move-up').forEach(b => {
-      b.onclick = () => {
-        const i = parseInt(b.getAttribute('data-idx'), 10);
-        const temp = images[i];
-        images[i] = images[i - 1];
-        images[i - 1] = temp;
-        renderPhotos();
-        updateLivePreview();
-      };
-    });
+  const featuredChk = h('input', {
+    type: 'checkbox',
+    checked: Boolean(existing?.featured),
+    onchange: () => { isDirty = true; }
+  });
 
-    photosList.querySelectorAll('.btn-move-down').forEach(b => {
-      b.onclick = () => {
-        const i = parseInt(b.getAttribute('data-idx'), 10);
-        const temp = images[i];
-        images[i] = images[i + 1];
-        images[i + 1] = temp;
-        renderPhotos();
-        updateLivePreview();
-      };
-    });
+  // Sticky Live Preview Card
+  const prevMedia = h('div', { class: 'card-media' });
+  const prevEyebrow = h('span', { class: 'card-eyebrow' });
+  const prevTitle = h('h3', { class: 'card-title' });
+  const prevMeta = h('p', { class: 'card-meta' });
+  const prevPrice = h('div', { style: 'font-weight:600; font-size:14px; color:var(--bronze); margin-top:8px;' });
 
-    photosList.querySelectorAll('.btn-remove-photo').forEach(b => {
-      b.onclick = () => {
-        const i = parseInt(b.getAttribute('data-idx'), 10);
-        images.splice(i, 1);
-        renderPhotos();
-        updateLivePreview();
-      };
-    });
-  }
+  const previewBox = h('div', { class: 'preview-box' },
+    h('div', { class: 'preview-label', text: 'Live Website Card Preview' }),
+    prevMedia,
+    h('div', { class: 'card-body' }, prevEyebrow, prevTitle, prevMeta, prevPrice)
+  );
 
-  async function handleFiles(fileList) {
-    if (!fileList || fileList.length === 0) return;
-    progressBar.style.display = 'block';
+  function updatePreview() {
+    prevEyebrow.textContent = CAT_MAP[catSelect.value] || catSelect.value;
+    prevTitle.textContent = nameInp.value.trim() || 'Design Name';
+    prevMeta.textContent = matInp.value.trim() || 'Material Spec';
 
-    for (let i = 0; i < fileList.length; i++) {
-      const file = fileList[i];
+    const p = priceInp.value.trim();
+    prevPrice.textContent = p ? `₹${Number(p).toLocaleString('en-IN')}` : 'Price on request';
+
+    prevMedia.innerHTML = '';
+    if (photos.length > 0 && photos[0].url) {
+      prevMedia.appendChild(h('img', { src: photos[0].url, alt: nameInp.value }));
+    } else if (plateBackup && typeof window.renderPlate === 'function') {
       try {
-        const uploadedUrl = await uploadMedia(file, (p) => {
-          progressFill.style.width = `${p}%`;
-        });
-        images.push({ url: uploadedUrl, alt: nameInput.value });
-        renderPhotos();
-        updateLivePreview();
-      } catch (err) {
-        showToast(`Failed to upload ${file.name}: ${err.message}`, 'error');
+        const pHtml = window.renderPlate(plateBackup, { zoom: 0.65 });
+        prevMedia.innerHTML = `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; transform:scale(0.65);">${pHtml}</div>`;
+      } catch (_) {
+        renderInitialsFallback(prevMedia, nameInp.value);
       }
+    } else {
+      renderInitialsFallback(prevMedia, nameInp.value);
     }
-
-    progressBar.style.display = 'none';
-    progressFill.style.width = '0%';
   }
 
-  dropzone.onclick = () => fileInput.click();
-  fileInput.onchange = () => handleFiles(fileInput.files);
-
-  dropzone.ondragover = (e) => { e.preventDefault(); dropzone.classList.add('dragover'); };
-  dropzone.ondragleave = () => dropzone.classList.remove('dragover');
-  dropzone.ondrop = (e) => {
-    e.preventDefault();
-    dropzone.classList.remove('dragover');
-    if (e.dataTransfer.files) handleFiles(e.dataTransfer.files);
-  };
-
-  renderPhotos();
-  updateLivePreview();
-
-  // Save handler
-  async function saveDesign() {
-    const slugErr = container.querySelector('#slugError');
+  // Save execution
+  async function performSave() {
+    nameErr.style.display = 'none';
     slugErr.style.display = 'none';
 
+    const name = nameInp.value.trim();
+    if (!name) {
+      nameErr.textContent = 'Please enter a design name';
+      nameErr.style.display = 'block';
+      nameInp.focus();
+      return false;
+    }
+
+    const slug = slugInp.value.trim() || slugify(name);
+    if (!/^[a-z0-9-]{2,80}$/.test(slug)) {
+      slugErr.textContent = 'Invalid slug. Must be 2-80 characters using lowercase letters, numbers, and hyphens';
+      slugErr.style.display = 'block';
+      slugInp.focus();
+      return false;
+    }
+
     const payload = {
-      name: nameInput.value.trim(),
+      name,
       category: catSelect.value,
-      slug: slugInput.value.trim(),
-      material: materialInput.value.trim(),
-      desc: descInput.value.trim(),
-      tags,
-      finishes,
-      sizes,
-      price: priceInput.value.trim() ? Number(priceInput.value.trim()) : null,
-      images,
-      plate,
-      status: publishedCheckbox.checked ? 'published' : 'draft',
-      featured: featuredCheckbox.checked
+      slug,
+      material: matInp.value.trim(),
+      tags: tagsChips.getValues(),
+      desc: descInp.value.trim(),
+      finishes: finishesChips.getValues(),
+      sizes: sizesChips.getValues(),
+      price: priceInp.value.trim() ? Number(priceInp.value.trim()) : null,
+      images: photos,
+      plate: plateBackup,
+      status: statusVal,
+      featured: featuredChk.checked,
+      order: existing?.order || 0
     };
 
     try {
       if (isEdit) {
-        await api(`/api/admin/designs/${designId}`, {
-          method: 'PUT',
-          body: payload
-        });
-        showToast('Design updated successfully', 'success');
+        await api(`/api/admin/designs/${id}`, { method: 'PUT', body: payload });
+        toast('Design updated successfully', 'success');
       } else {
-        await api('/api/admin/designs', {
-          method: 'POST',
-          body: payload
-        });
-        showToast('Design created successfully', 'success');
+        await api('/api/admin/designs', { method: 'POST', body: payload });
+        toast('Design created successfully', 'success');
       }
-      setUnsavedChanges(false);
+      isDirty = false;
       return true;
     } catch (err) {
-      if (err.message.includes('slug')) {
+      if (err.message && err.message.toLowerCase().includes('slug')) {
         slugErr.textContent = err.message;
         slugErr.style.display = 'block';
+        slugInp.focus();
       } else {
-        showToast(err.message, 'error');
+        toast(err.message, 'error');
       }
       return false;
     }
   }
 
-  form.onsubmit = async (e) => {
-    e.preventDefault();
-    const ok = await saveDesign();
-    if (ok) {
-      location.hash = '#/designs';
+  // Submit Buttons
+  const saveBtn = h('button', {
+    type: 'button',
+    class: 'btn btn-ink',
+    onclick: async () => {
+      saveBtn.disabled = true;
+      const ok = await performSave();
+      saveBtn.disabled = false;
+      if (ok) go('designs');
     }
-  };
+  }, 'Save');
 
-  const saveAnotherBtn = container.querySelector('#btnSaveAndAddAnother');
-  if (saveAnotherBtn) {
-    saveAnotherBtn.onclick = async () => {
-      const ok = await saveDesign();
+  const saveAnotherBtn = h('button', {
+    type: 'button',
+    class: 'btn btn-outline',
+    onclick: async () => {
+      const ok = await performSave();
       if (ok) {
-        renderDesignForm(container, null);
+        renderDesignForm(root, null);
       }
-    };
-  }
+    }
+  }, 'Save and add another');
+
+  const cancelBtn = h('button', {
+    type: 'button',
+    class: 'btn btn-outline',
+    onclick: () => {
+      if (!isDirty || confirm('Discard changes?')) {
+        isDirty = false;
+        go('designs');
+      }
+    }
+  }, 'Cancel');
+
+  // Assemble Layout
+  const formCard = h('div', { class: 'card', style: 'margin-bottom:0;' },
+    h('h2', { style: 'font-size:20px; font-weight:600; margin-bottom:20px;', text: isEdit ? 'Edit Design' : 'Add New Design' }),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Name *' }),
+      nameInp,
+      nameErr
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Category *' }),
+      catSelect
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'URL Slug *' }),
+      slugInp,
+      slugErr,
+      h('span', { class: 'form-hint', text: 'Auto-generated from name. Path: /design/<slug>' })
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Material Specification' }),
+      matInp
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Filter Tags' }),
+      tagsChips,
+      h('span', { class: 'form-hint', text: 'Tags match category filters on the website.' })
+    ),
+    h('div', { class: 'form-group' },
+      h('div', { style: 'display:flex; justify-content:space-between;' },
+        h('label', { class: 'form-label', text: 'Short Description' }),
+        descCount
+      ),
+      descInp
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Available Finishes' }),
+      finishesChips
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Standard Sizes' }),
+      sizesChips
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Price (₹)' }),
+      priceInp,
+      h('span', { class: 'form-hint', text: 'Leave empty to show Price on request' })
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Photos' }),
+      uploader,
+      h('span', { class: 'form-hint', text: 'The first photo is the cover. Use clear, well-lit photos.' })
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Publishing Status' }),
+      h('div', { style: 'display:flex; gap:8px;' }, pubToggleBtn, draftToggleBtn)
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { style: 'display:flex; align-items:center; gap:8px; cursor:pointer;' },
+        featuredChk,
+        h('span', { style: 'font-weight:600; font-size:14px;', text: 'Show a Popular badge' })
+      )
+    ),
+    h('div', { style: 'display:flex; gap:10px; margin-top:24px; padding-top:16px; border-top:1px solid var(--border); flex-wrap:wrap;' },
+      saveBtn,
+      !isEdit ? saveAnotherBtn : null,
+      cancelBtn
+    )
+  );
+
+  const formWrap = h('div', { class: 'form-preview-layout' },
+    formCard,
+    h('div', { class: 'sticky-preview' }, previewBox)
+  );
+
+  updatePreview();
+  root.append(topNav, formWrap);
 }
 
 // ==========================================
-// 2. PROJECTS VIEW (Gallery & Reordering)
+// 3. PROJECTS GALLERY
 // ==========================================
-export async function renderProjects(container) {
-  container.innerHTML = '<div class="skeleton" style="height: 300px; width: 100%;"></div>';
+export async function renderProjects(root) {
+  root.innerHTML = '';
+  root.appendChild(h('div', { class: 'skeleton', style: 'height:300px; width:100%;' }));
 
   try {
     const res = await api('/api/admin/projects');
-    const projects = res.items || [];
+    let projects = res.items || [];
 
-    container.innerHTML = `
-      <div class="toolbar">
-        <h2 style="font-size: 18px; font-weight: 600;">Client Installations (${projects.length})</h2>
-        <div style="display: flex; gap: 8px;">
-          <button id="btnSaveProjectOrder" class="btn btn-outline btn-sm" style="display: none;">Save Order</button>
-          <button id="btnAddProject" class="btn btn-ink btn-sm">
-            <svg class="svg-icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            <span>Add Project</span>
-          </button>
-        </div>
-      </div>
+    root.innerHTML = '';
 
-      ${projects.length === 0 ? `
-        <div class="card empty-state">
-          <h3>No projects yet</h3>
-          <p>Add photos of completed signs to build trust on the Our Work gallery.</p>
-        </div>
-      ` : `
-        <div class="catalog-grid" id="projectGrid">
-          ${projects.map((p, idx) => `
-            <div class="catalog-card project-card" data-id="${p._id}" data-idx="${idx}">
-              <div class="card-media">
-                ${p.images && p.images[0] ? `<img src="${esc(p.images[0].url)}" alt="${esc(p.title)}">` : `<div style="color:var(--text-muted); font-size:13px;">No Photo</div>`}
-                <div class="card-badges">
-                  <span class="status-pill status-${esc(p.status)}">${esc(p.status)}</span>
-                </div>
-              </div>
-              <div class="card-body">
-                <span class="card-eyebrow">${esc(p.type)} · ${esc(p.location || 'Gujarat')}</span>
-                <h3 class="card-title">${esc(p.title)}</h3>
-                <p class="card-meta">${esc(p.description || '')}</p>
-
-                <div class="card-actions">
-                  <button class="btn btn-outline btn-sm btn-edit-proj" data-id="${p._id}">Edit</button>
-                  <button class="btn btn-outline btn-sm btn-move-proj-up" data-idx="${idx}" title="Move up">▲</button>
-                  <button class="btn btn-outline btn-sm btn-move-proj-down" data-idx="${idx}" title="Move down">▼</button>
-                  <button class="btn btn-outline btn-sm btn-del-proj" data-id="${p._id}" style="margin-left: auto; color: var(--danger);">✕</button>
-                </div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      `}
-    `;
-
-    const saveOrderBtn = container.querySelector('#btnSaveProjectOrder');
-
-    function notifyOrderChanged() {
-      if (saveOrderBtn) saveOrderBtn.style.display = 'inline-flex';
-    }
-
-    // Up / Down project order
-    container.querySelectorAll('.btn-move-proj-up').forEach(b => {
-      b.onclick = () => {
-        const i = parseInt(b.getAttribute('data-idx'), 10);
-        if (i > 0) {
-          const temp = projects[i];
-          projects[i] = projects[i - 1];
-          projects[i - 1] = temp;
-          notifyOrderChanged();
-          renderProjects(container);
-        }
-      };
-    });
-
-    container.querySelectorAll('.btn-move-proj-down').forEach(b => {
-      b.onclick = () => {
-        const i = parseInt(b.getAttribute('data-idx'), 10);
-        if (i < projects.length - 1) {
-          const temp = projects[i];
-          projects[i] = projects[i + 1];
-          projects[i + 1] = temp;
-          notifyOrderChanged();
-          renderProjects(container);
-        }
-      };
-    });
-
-    if (saveOrderBtn) {
-      saveOrderBtn.onclick = async () => {
-        const ids = projects.map(p => p._id);
+    const saveOrderBtn = h('button', {
+      class: 'btn btn-ink btn-sm',
+      style: 'display:none;',
+      onclick: async () => {
         try {
           await api('/api/admin/projects/reorder', {
             method: 'PUT',
-            body: { ids }
+            body: { ids: projects.map(p => p._id) }
           });
-          showToast('Project display order saved', 'success');
+          toast('Project order updated', 'success');
           saveOrderBtn.style.display = 'none';
         } catch (err) {
-          showToast(err.message, 'error');
+          toast(err.message, 'error');
         }
-      };
-    }
+      }
+    }, 'Save order');
 
-    // Add Project
-    container.querySelector('#btnAddProject').onclick = () => {
-      openProjectDrawer(null, () => renderProjects(container));
-    };
+    const addBtn = h('button', {
+      class: 'btn btn-ink btn-sm',
+      onclick: () => openProjectDrawer(null, () => renderProjects(root))
+    },
+      h('span', { class: 'icon i-building' }),
+      h('span', { text: '+ Add project' })
+    );
 
-    // Edit Project
-    container.querySelectorAll('.btn-edit-proj').forEach(b => {
-      b.onclick = () => {
-        const id = b.getAttribute('data-id');
-        const proj = projects.find(p => String(p._id) === id);
-        if (proj) openProjectDrawer(proj, () => renderProjects(container));
-      };
-    });
+    const toolbar = h('div', {
+      style: 'display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px;'
+    },
+      h('div', {},
+        h('h2', { style: 'font-size:18px; font-weight:600;', text: `Installation Projects (${projects.length})` }),
+        h('p', { class: 'form-hint', text: 'These photos appear in Our Work and Recent Installations on the website.' })
+      ),
+      h('div', { style: 'display:flex; gap:10px;' }, saveOrderBtn, addBtn)
+    );
 
-    // Delete Project
-    container.querySelectorAll('.btn-del-proj').forEach(b => {
-      b.onclick = async () => {
-        const id = b.getAttribute('data-id');
-        const ok = await confirmDialog({
-          title: 'Delete Project',
-          message: 'Are you sure you want to remove this project?',
-          confirmText: 'Delete',
-          danger: true
-        });
-        if (ok) {
-          try {
-            await api(`/api/admin/projects/${id}`, { method: 'DELETE' });
-            showToast('Project deleted', 'info');
-            renderProjects(container);
-          } catch (err) {
-            showToast(err.message, 'error');
+    const grid = h('div', { class: 'catalog-grid' });
+
+    if (projects.length === 0) {
+      grid.appendChild(h('div', { class: 'card', style: 'text-align:center; padding:48px 24px; grid-column:1/-1;' },
+        h('h3', { text: 'No projects added yet' }),
+        h('p', { class: 'form-hint', text: 'These photos appear in Our Work and Recent Installations on the website.', style: 'margin:8px 0 16px;' }),
+        h('button', { class: 'btn btn-ink btn-sm', onclick: () => openProjectDrawer(null, () => renderProjects(root)) }, 'Add your first project')
+      ));
+    } else {
+      projects.forEach((proj, idx) => {
+        const card = h('div', { class: 'catalog-card' });
+
+        const media = h('div', { class: 'card-media' });
+        if (proj.images && proj.images.length > 0 && proj.images[0].url) {
+          media.appendChild(h('img', { src: proj.images[0].url, alt: proj.title, loading: 'lazy' }));
+        } else {
+          renderInitialsFallback(media, proj.title);
+        }
+
+        const badges = h('div', { class: 'card-badges' });
+        badges.appendChild(h('span', { class: `status-pill status-${proj.status}`, text: proj.status }));
+        media.appendChild(badges);
+
+        const body = h('div', { class: 'card-body' },
+          h('span', { class: 'card-eyebrow', text: `${proj.type} · ${proj.location || 'Gujarat'}` }),
+          h('h3', { class: 'card-title', text: proj.title }),
+          h('p', { class: 'card-meta', text: proj.description || 'On-site installation' })
+        );
+
+        // Actions: Reorder up/down + Edit + Delete
+        const upBtn = h('button', {
+          class: 'btn btn-outline btn-sm',
+          disabled: idx === 0,
+          title: 'Move earlier',
+          onclick: () => {
+            const temp = projects[idx];
+            projects[idx] = projects[idx - 1];
+            projects[idx - 1] = temp;
+            saveOrderBtn.style.display = 'inline-flex';
+            renderList();
           }
-        }
-      };
-    });
+        }, '▲');
 
-  } catch (err) {
-    container.innerHTML = `<div class="card"><p class="form-error">Failed to load projects: ${esc(err.message)}</p></div>`;
-  }
-}
+        const downBtn = h('button', {
+          class: 'btn btn-outline btn-sm',
+          disabled: idx === projects.length - 1,
+          title: 'Move later',
+          onclick: () => {
+            const temp = projects[idx];
+            projects[idx] = projects[idx + 1];
+            projects[idx + 1] = temp;
+            saveOrderBtn.style.display = 'inline-flex';
+            renderList();
+          }
+        }, '▼');
 
-function openProjectDrawer(proj, onSaved) {
-  const isEdit = Boolean(proj);
-  let pImages = proj?.images ? [...proj.images] : [];
+        const editBtn = h('button', {
+          class: 'btn btn-outline btn-sm',
+          onclick: () => openProjectDrawer(proj, () => renderProjects(root))
+        }, 'Edit');
 
-  const contentHtml = `
-    <form id="projectDrawerForm" style="display:flex; flex-direction:column; gap:16px;">
-      <div>
-        <label class="form-label" for="projTitle">Project Title *</label>
-        <input type="text" id="projTitle" class="form-input" required maxlength="150" value="${esc(proj?.title || '')}" placeholder="e.g. Modern Brass Villa Nameplate">
-      </div>
+        const delBtn = h('button', {
+          class: 'btn btn-outline btn-sm',
+          style: 'color:var(--danger); margin-left:auto;',
+          onclick: async () => {
+            const ok = await confirmDialog({
+              title: 'Delete Project',
+              message: `Delete installation project "${proj.title}"?`,
+              confirmText: 'Delete',
+              danger: true
+            });
+            if (ok) {
+              try {
+                await api(`/api/admin/projects/${proj._id}`, { method: 'DELETE' });
+                toast('Project deleted', 'info');
+                renderProjects(root);
+              } catch (err) {
+                toast(err.message, 'error');
+              }
+            }
+          }
+        }, '✕');
 
-      <div>
-        <label class="form-label" for="projType">Category Type</label>
-        <select id="projType" class="form-select">
-          <option value="Nameplate" ${proj?.type === 'Nameplate' ? 'selected' : ''}>Nameplate</option>
-          <option value="Glow Sign" ${proj?.type === 'Glow Sign' ? 'selected' : ''}>Glow Sign</option>
-          <option value="Office & Interiors" ${proj?.type === 'Office & Interiors' ? 'selected' : ''}>Office & Interiors</option>
-          <option value="Board" ${proj?.type === 'Board' ? 'selected' : ''}>Board</option>
-          <option value="Other" ${proj?.type === 'Other' ? 'selected' : ''}>Other</option>
-        </select>
-      </div>
+        const actions = h('div', { class: 'card-actions' }, upBtn, downBtn, editBtn, delBtn);
+        body.appendChild(actions);
 
-      <div>
-        <label class="form-label" for="projLocation">Location</label>
-        <input type="text" id="projLocation" class="form-input" maxlength="100" value="${esc(proj?.location || '')}" placeholder="e.g. Gandhidham, Gujarat">
-      </div>
-
-      <div>
-        <label class="form-label" for="projDesc">Description</label>
-        <textarea id="projDesc" class="form-textarea" rows="3" maxlength="1000" placeholder="Details about dimensions, client and installation...">${esc(proj?.description || '')}</textarea>
-      </div>
-
-      <div>
-        <label class="form-label">Project Photos</label>
-        <div id="projDropzone" class="dropzone" style="padding: 20px;">
-          <p style="font-size: 13px;">Click to upload photos (WebP compressed)</p>
-          <input type="file" id="projFileInput" multiple accept="image/jpeg,image/png,image/webp" style="display:none;">
-        </div>
-        <div id="projPhotosList" class="photo-list"></div>
-      </div>
-
-      <div>
-        <label class="form-label" for="projStatus">Status</label>
-        <select id="projStatus" class="form-select">
-          <option value="published" ${proj?.status === 'published' ? 'selected' : (!isEdit ? 'selected' : '')}>Published</option>
-          <option value="draft" ${proj?.status === 'draft' ? 'selected' : ''}>Draft</option>
-        </select>
-      </div>
-
-      <div style="display: flex; gap: 10px; margin-top: 14px;">
-        <button type="submit" class="btn btn-ink" style="flex: 1;">Save Project</button>
-        <button type="button" id="btnCancelProj" class="btn btn-outline">Cancel</button>
-      </div>
-    </form>
-  `;
-
-  openDrawer(isEdit ? 'Edit Project' : 'New Installation Project', contentHtml, (bodyEl) => {
-    const pList = bodyEl.querySelector('#projPhotosList');
-    const pDrop = bodyEl.querySelector('#projDropzone');
-    const pFileInput = bodyEl.querySelector('#projFileInput');
-
-    function renderProjPhotos() {
-      pList.innerHTML = pImages.map((img, idx) => `
-        <div class="photo-item">
-          <img src="${esc(img.url)}">
-          <div class="photo-actions">
-            <button type="button" class="photo-action-btn btn-del-img" data-idx="${idx}">✕</button>
-          </div>
-        </div>
-      `).join('');
-
-      pList.querySelectorAll('.btn-del-img').forEach(b => {
-        b.onclick = () => {
-          pImages.splice(parseInt(b.getAttribute('data-idx'), 10), 1);
-          renderProjPhotos();
-        };
+        card.append(media, body);
+        grid.appendChild(card);
       });
     }
 
-    pDrop.onclick = () => pFileInput.click();
-    pFileInput.onchange = async () => {
-      for (const file of pFileInput.files) {
-        try {
-          const url = await uploadMedia(file);
-          pImages.push({ url, alt: bodyEl.querySelector('#projTitle').value });
-          renderProjPhotos();
-        } catch (err) {
-          showToast(err.message, 'error');
-        }
+    function renderList() {
+      renderProjects(root);
+    }
+
+    root.append(toolbar, grid);
+  } catch (err) {
+    root.innerHTML = '';
+    root.appendChild(h('div', { class: 'card' }, h('p', { class: 'form-error', text: err.message })));
+  }
+}
+
+function openProjectDrawer(proj, onReload) {
+  const isEdit = Boolean(proj);
+  let photos = proj?.images ? [...proj.images] : [];
+
+  const titleInp = h('input', {
+    type: 'text',
+    class: 'form-input',
+    required: true,
+    placeholder: 'e.g. Orbit Studio Halo-Lit Fascia',
+    value: proj?.title || ''
+  });
+
+  const typeSelect = h('select', { class: 'form-select' },
+    ['Glow Sign', 'Nameplate', 'Office & Interiors', 'Board', 'Other'].map(t =>
+      h('option', { value: t, selected: proj?.type === t, text: t })
+    )
+  );
+
+  const locInp = h('input', {
+    type: 'text',
+    class: 'form-input',
+    placeholder: 'e.g. Gandhidham, Gujarat',
+    value: proj?.location || ''
+  });
+
+  const descInp = h('textarea', {
+    class: 'form-textarea',
+    rows: 3,
+    placeholder: 'Details about the materials, dimensions, and mounting...',
+    value: proj?.description || ''
+  });
+
+  const statusSelect = h('select', { class: 'form-select' },
+    h('option', { value: 'published', selected: proj?.status === 'published' || !isEdit, text: 'Published' }),
+    h('option', { value: 'draft', selected: proj?.status === 'draft', text: 'Draft' })
+  );
+
+  const uploader = photoUploader({
+    images: photos,
+    max: 10,
+    onChange: (imgs) => { photos = imgs; }
+  });
+
+  const saveBtn = h('button', {
+    type: 'button',
+    class: 'btn btn-ink',
+    onclick: async () => {
+      const title = titleInp.value.trim();
+      if (!title) {
+        toast('Project title is required', 'error');
+        titleInp.focus();
+        return;
       }
-    };
 
-    renderProjPhotos();
-
-    bodyEl.querySelector('#btnCancelProj').onclick = closeDrawer;
-
-    bodyEl.querySelector('#projectDrawerForm').onsubmit = async (e) => {
-      e.preventDefault();
       const payload = {
-        title: bodyEl.querySelector('#projTitle').value.trim(),
-        type: bodyEl.querySelector('#projType').value,
-        location: bodyEl.querySelector('#projLocation').value.trim(),
-        description: bodyEl.querySelector('#projDesc').value.trim(),
-        images: pImages,
-        status: bodyEl.querySelector('#projStatus').value
+        title,
+        type: typeSelect.value,
+        location: locInp.value.trim(),
+        description: descInp.value.trim(),
+        images: photos,
+        status: statusSelect.value,
+        order: proj?.order || 0
       };
 
       try {
         if (isEdit) {
           await api(`/api/admin/projects/${proj._id}`, { method: 'PUT', body: payload });
-          showToast('Project updated', 'success');
+          toast('Project updated', 'success');
         } else {
           await api('/api/admin/projects', { method: 'POST', body: payload });
-          showToast('Project created', 'success');
+          toast('Project added', 'success');
         }
-        closeDrawer();
-        if (typeof onSaved === 'function') onSaved();
+        drawer.close();
+        if (onReload) onReload();
       } catch (err) {
-        showToast(err.message, 'error');
+        toast(err.message, 'error');
       }
-    };
+    }
+  }, 'Save Project');
+
+  const content = h('div', { style: 'display:flex; flex-direction:column; gap:16px;' },
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Project Title *' }),
+      titleInp
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Category Type' }),
+      typeSelect
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Location' }),
+      locInp
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Description' }),
+      descInp
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Photos' }),
+      uploader
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Status' }),
+      statusSelect
+    ),
+    h('div', { style: 'margin-top:10px;' }, saveBtn)
+  );
+
+  const drawer = openDrawer({
+    title: isEdit ? 'Edit Installation Project' : 'Add Installation Project',
+    content
   });
 }
 
 // ==========================================
-// 3. REVIEWS VIEW
+// 4. REVIEWS MANAGEMENT
 // ==========================================
-export async function renderReviews(container) {
-  container.innerHTML = '<div class="skeleton" style="height: 300px; width: 100%;"></div>';
+export async function renderReviews(root) {
+  root.innerHTML = '';
+  root.appendChild(h('div', { class: 'skeleton', style: 'height:300px; width:100%;' }));
 
   try {
-    const res = await api('/api/admin/reviews');
-    const reviews = res.items || [];
+    const [reviewsRes, designsRes] = await Promise.all([
+      api('/api/admin/reviews'),
+      api('/api/admin/designs?status=published').catch(() => ({ items: [] }))
+    ]);
+    const reviews = reviewsRes.items || [];
+    const publishedDesigns = designsRes.items || [];
 
-    container.innerHTML = `
-      <!-- Notice Banner -->
-      <div style="background-color: var(--bronze-light); border: 1px solid var(--border); padding: 12px 18px; border-radius: var(--radius); margin-bottom: 24px; font-size: 13px;">
-        💡 <strong>Notice:</strong> Only add real customer reviews from completed orders and satisfied clients.
-      </div>
+    root.innerHTML = '';
 
-      <div class="toolbar">
-        <h2 style="font-size: 18px; font-weight: 600;">Customer Reviews (${reviews.length})</h2>
-        <button id="btnAddReview" class="btn btn-ink btn-sm">
-          <svg class="svg-icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span>Add Review</span>
-        </button>
-      </div>
+    const toolbar = h('div', {
+      style: 'display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;'
+    },
+      h('div', {},
+        h('h2', { style: 'font-size:18px; font-weight:600;', text: `Client Reviews (${reviews.length})` }),
+        h('p', { class: 'form-hint', text: 'Only add real customer reviews.' })
+      ),
+      h('button', {
+        class: 'btn btn-ink btn-sm',
+        onclick: () => openReviewModal(null, publishedDesigns, () => renderReviews(root))
+      },
+        h('span', { class: 'icon i-star' }),
+        h('span', { text: '+ Add review' })
+      )
+    );
 
-      ${reviews.length === 0 ? `
-        <div class="card empty-state">
-          <h3>No reviews yet</h3>
-          <p>Add your first client testimonial to display on the homepage.</p>
-        </div>
-      ` : `
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
-          ${reviews.map(r => `
-            <div class="card" style="display: flex; flex-direction: column;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <div style="color: #f59e0b; font-size: 16px;">
-                  ${'★'.repeat(r.rating || 5)}${'☆'.repeat(5 - (r.rating || 5))}
-                </div>
-                <span class="status-pill status-${esc(r.status)}">${esc(r.status)}</span>
-              </div>
-              <p style="font-size: 14px; font-style: italic; margin-bottom: 12px; flex: 1;">"${esc(r.text)}"</p>
-              <div style="border-top: 1px solid var(--border-light); padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                  <strong style="font-size: 14px;">${esc(r.name)}</strong>
-                  <div style="font-size: 12px; color: var(--text-muted);">${esc(r.project || 'Residential client')}</div>
-                </div>
-                <div style="display: flex; gap: 6px;">
-                  <button class="btn btn-outline btn-sm btn-edit-review" data-id="${r._id}">Edit</button>
-                  <button class="btn btn-outline btn-sm btn-del-review" data-id="${r._id}" style="color: var(--danger);">✕</button>
-                </div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      `}
-    `;
+    const list = h('div', { style: 'display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:18px;' });
 
-    container.querySelector('#btnAddReview').onclick = () => {
-      openReviewModal(null, () => renderReviews(container));
-    };
+    if (reviews.length === 0) {
+      list.appendChild(h('div', { class: 'card', style: 'text-align:center; padding:48px 24px; grid-column:1/-1;' },
+        h('h3', { text: 'No customer reviews added' }),
+        h('p', { class: 'form-hint', text: 'Real client testimonials highlight craft quality and build buyer trust on the website.', style: 'margin:8px 0 16px;' }),
+        h('button', {
+          class: 'btn btn-ink btn-sm',
+          onclick: () => openReviewModal(null, publishedDesigns, () => renderReviews(root))
+        }, 'Add review')
+      ));
+    } else {
+      reviews.forEach(rev => {
+        const card = h('div', { class: 'card', style: 'display:flex; flex-direction:column; margin-bottom:0;' });
 
-    container.querySelectorAll('.btn-edit-review').forEach(b => {
-      b.onclick = () => {
-        const id = b.getAttribute('data-id');
-        const rev = reviews.find(r => String(r._id) === id);
-        if (rev) openReviewModal(rev, () => renderReviews(container));
-      };
-    });
+        const stars = '★'.repeat(rev.rating || 5) + '☆'.repeat(5 - (rev.rating || 5));
+        const head = h('div', { style: 'display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;' },
+          h('span', { style: 'color:#d97706; font-size:17px; letter-spacing:1px;', text: stars }),
+          h('span', { class: `status-pill status-${rev.status}`, text: rev.status })
+        );
 
-    container.querySelectorAll('.btn-del-review').forEach(b => {
-      b.onclick = async () => {
-        const id = b.getAttribute('data-id');
-        const ok = await confirmDialog({
-          title: 'Delete Review',
-          message: 'Are you sure you want to delete this customer review?',
-          confirmText: 'Delete',
-          danger: true
+        const quote = h('p', {
+          style: 'font-style:italic; font-size:14px; margin-bottom:14px; flex:1;',
+          text: `"${rev.text}"`
         });
-        if (ok) {
-          try {
-            await api(`/api/admin/reviews/${id}`, { method: 'DELETE' });
-            showToast('Review deleted', 'info');
-            renderReviews(container);
-          } catch (err) {
-            showToast(err.message, 'error');
-          }
-        }
-      };
-    });
 
+        const meta = h('div', { style: 'border-top:1px solid var(--border); padding-top:10px; font-size:13px;' },
+          h('strong', { text: rev.name }),
+          rev.project ? h('div', { class: 'form-hint', text: rev.project }) : null,
+          h('div', { class: 'form-hint', style: 'font-size:11px; margin-top:2px;', text: relTime(rev.createdAt) })
+        );
+
+        const editBtn = h('button', {
+          class: 'btn btn-outline btn-sm',
+          onclick: () => openReviewModal(rev, publishedDesigns, () => renderReviews(root))
+        }, 'Edit');
+
+        const isPub = rev.status === 'published';
+        const toggleBtn = h('button', {
+          class: 'btn btn-outline btn-sm',
+          onclick: async () => {
+            try {
+              await api(`/api/admin/reviews/${rev._id}`, {
+                method: 'PUT',
+                body: { ...rev, status: isPub ? 'draft' : 'published' }
+              });
+              toast(`Marked as ${isPub ? 'draft' : 'published'}`, 'success');
+              renderReviews(root);
+            } catch (err) {
+              toast(err.message, 'error');
+            }
+          }
+        }, isPub ? 'Unpublish' : 'Publish');
+
+        const delBtn = h('button', {
+          class: 'btn btn-outline btn-sm',
+          style: 'color:var(--danger); margin-left:auto;',
+          onclick: async () => {
+            const ok = await confirmDialog({
+              title: 'Delete Review',
+              message: `Delete review from ${rev.name}?`,
+              confirmText: 'Delete',
+              danger: true
+            });
+            if (ok) {
+              try {
+                await api(`/api/admin/reviews/${rev._id}`, { method: 'DELETE' });
+                toast('Review deleted', 'info');
+                renderReviews(root);
+              } catch (err) {
+                toast(err.message, 'error');
+              }
+            }
+          }
+        }, '✕');
+
+        const foot = h('div', { style: 'display:flex; gap:8px; margin-top:12px; align-items:center;' }, editBtn, toggleBtn, delBtn);
+
+        card.append(head, quote, meta, foot);
+        list.appendChild(card);
+      });
+    }
+
+    root.append(toolbar, list);
   } catch (err) {
-    container.innerHTML = `<div class="card"><p class="form-error">Failed to load reviews: ${esc(err.message)}</p></div>`;
+    root.innerHTML = '';
+    root.appendChild(h('div', { class: 'card' }, h('p', { class: 'form-error', text: err.message })));
   }
 }
 
-function openReviewModal(rev, onSaved) {
+function openReviewModal(rev, publishedDesigns, onReload) {
   const isEdit = Boolean(rev);
-  const overlay = document.getElementById('modalOverlay');
-  const title = document.getElementById('modalTitle');
-  const body = document.getElementById('modalBody');
-  const footer = document.getElementById('modalFooter');
+  let rating = rev?.rating || 5;
 
-  title.textContent = isEdit ? 'Edit Review' : 'Add Client Review';
-  body.innerHTML = `
-    <form id="reviewModalForm">
-      <div class="form-group">
-        <label class="form-label" for="revName">Customer Name *</label>
-        <input type="text" id="revName" class="form-input" required maxlength="100" value="${esc(rev?.name || '')}" placeholder="e.g. Rajesh Patel">
-      </div>
+  const nameInp = h('input', {
+    type: 'text',
+    class: 'form-input',
+    required: true,
+    placeholder: 'Customer or business name',
+    value: rev?.name || ''
+  });
 
-      <div class="form-group">
-        <label class="form-label" for="revText">Review Text * (Max 600 chars)</label>
-        <textarea id="revText" class="form-textarea" rows="3" required maxlength="600" placeholder="Feedback on quality, finish and installation...">${esc(rev?.text || '')}</textarea>
-      </div>
+  const textInp = h('textarea', {
+    class: 'form-textarea',
+    rows: 4,
+    maxlength: 600,
+    required: true,
+    placeholder: 'Real feedback regarding finish quality, packaging or site installation...',
+    value: rev?.text || ''
+  });
+  const textCounter = h('span', { class: 'form-hint', text: `${textInp.value.length} / 600` });
+  textInp.oninput = () => { textCounter.textContent = `${textInp.value.length} / 600`; };
 
-      <div class="form-group">
-        <label class="form-label" for="revRating">Rating (1 to 5 Stars)</label>
-        <select id="revRating" class="form-select">
-          <option value="5" ${rev?.rating === 5 || !isEdit ? 'selected' : ''}>★★★★★ 5 Stars</option>
-          <option value="4" ${rev?.rating === 4 ? 'selected' : ''}>★★★★☆ 4 Stars</option>
-          <option value="3" ${rev?.rating === 3 ? 'selected' : ''}>★★★☆☆ 3 Stars</option>
-          <option value="2" ${rev?.rating === 2 ? 'selected' : ''}>★★☆☆☆ 2 Stars</option>
-          <option value="1" ${rev?.rating === 1 ? 'selected' : ''}>★☆☆☆☆ 1 Star</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="revProject">Project or Design Name</label>
-        <input type="text" id="revProject" class="form-input" maxlength="120" value="${esc(rev?.project || '')}" placeholder="e.g. Classic Brass Wall Plate">
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="revStatus">Status</label>
-        <select id="revStatus" class="form-select">
-          <option value="published" ${rev?.status === 'published' || !isEdit ? 'selected' : ''}>Published</option>
-          <option value="draft" ${rev?.status === 'draft' ? 'selected' : ''}>Draft</option>
-        </select>
-      </div>
-    </form>
-  `;
-
-  footer.innerHTML = `
-    <button id="modalRevCancelBtn" class="btn btn-outline btn-sm">Cancel</button>
-    <button id="modalRevSaveBtn" class="btn btn-ink btn-sm">Save Review</button>
-  `;
-
-  overlay.style.display = 'flex';
-
-  function close() {
-    overlay.style.display = 'none';
-  }
-
-  document.getElementById('modalRevCancelBtn').onclick = close;
-
-  document.getElementById('modalRevSaveBtn').onclick = async () => {
-    const nameVal = body.querySelector('#revName').value.trim();
-    const textVal = body.querySelector('#revText').value.trim();
-    if (!nameVal || !textVal) {
-      showToast('Name and review text are required', 'error');
-      return;
+  // Star selector
+  const starsWrap = h('div', { style: 'display:flex; gap:4px; font-size:24px; cursor:pointer; color:#d97706;' });
+  function renderStars() {
+    starsWrap.innerHTML = '';
+    for (let i = 1; i <= 5; i++) {
+      const s = h('span', {
+        text: i <= rating ? '★' : '☆',
+        onclick: () => { rating = i; renderStars(); }
+      });
+      starsWrap.appendChild(s);
     }
+  }
+  renderStars();
 
-    const payload = {
-      name: nameVal,
-      text: textVal,
-      rating: parseInt(body.querySelector('#revRating').value, 10),
-      project: body.querySelector('#revProject').value.trim(),
-      status: body.querySelector('#revStatus').value
-    };
+  // Published design selector + Free text project
+  const designSelect = h('select', { class: 'form-select' },
+    h('option', { value: '', text: '— Select linked catalog design (optional) —' }),
+    publishedDesigns.map(d =>
+      h('option', { value: d.slug, selected: rev?.designSlug === d.slug, text: d.name })
+    )
+  );
 
-    try {
-      if (isEdit) {
-        await api(`/api/admin/reviews/${rev._id}`, { method: 'PUT', body: payload });
-        showToast('Review updated', 'success');
-      } else {
-        await api('/api/admin/reviews', { method: 'POST', body: payload });
-        showToast('Review created', 'success');
-      }
-      close();
-      if (typeof onSaved === 'function') onSaved();
-    } catch (err) {
-      showToast(err.message, 'error');
+  const projectInp = h('input', {
+    type: 'text',
+    class: 'form-input',
+    placeholder: 'e.g. Shanti Villa Nameplate or Custom Office Fascia',
+    value: rev?.project || ''
+  });
+
+  designSelect.onchange = () => {
+    if (designSelect.value && !projectInp.value) {
+      const match = publishedDesigns.find(d => d.slug === designSelect.value);
+      if (match) projectInp.value = match.name;
     }
   };
+
+  const statusSelect = h('select', { class: 'form-select' },
+    h('option', { value: 'published', selected: rev?.status === 'published' || !isEdit, text: 'Published' }),
+    h('option', { value: 'draft', selected: rev?.status === 'draft', text: 'Draft' })
+  );
+
+  const formBody = h('div', { style: 'display:flex; flex-direction:column; gap:14px;' },
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Customer Name *' }),
+      nameInp
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Rating' }),
+      starsWrap
+    ),
+    h('div', { class: 'form-group' },
+      h('div', { style: 'display:flex; justify-content:space-between;' },
+        h('label', { class: 'form-label', text: 'Review Text *' }),
+        textCounter
+      ),
+      textInp
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Linked Design' }),
+      designSelect
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Project / Client Reference' }),
+      projectInp
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Status' }),
+      statusSelect
+    )
+  );
+
+  openModal({
+    title: isEdit ? 'Edit Customer Review' : 'Add Customer Review',
+    content: formBody,
+    actions: [
+      {
+        label: 'Cancel',
+        onClick: ({ close }) => close()
+      },
+      {
+        label: 'Save Review',
+        primary: true,
+        onClick: async ({ close }) => {
+          const name = nameInp.value.trim();
+          const text = textInp.value.trim();
+          if (!name || !text) {
+            toast('Name and review text are required', 'error');
+            return;
+          }
+
+          const payload = {
+            name,
+            text,
+            rating,
+            designSlug: designSelect.value || '',
+            project: projectInp.value.trim(),
+            status: statusSelect.value
+          };
+
+          try {
+            if (isEdit) {
+              await api(`/api/admin/reviews/${rev._id}`, { method: 'PUT', body: payload });
+              toast('Review updated', 'success');
+            } else {
+              await api('/api/admin/reviews', { method: 'POST', body: payload });
+              toast('Review added', 'success');
+            }
+            close();
+            if (onReload) onReload();
+          } catch (err) {
+            toast(err.message, 'error');
+          }
+        }
+      }
+    ]
+  });
 }
 
 // ==========================================
-// 4. MEDIA VIEW (Blob Storage Browser)
+// 5. MEDIA STORAGE
 // ==========================================
-export async function renderMedia(container) {
-  container.innerHTML = '<div class="skeleton" style="height: 300px; width: 100%;"></div>';
+export async function renderMedia(root) {
+  root.innerHTML = '';
+  root.appendChild(h('div', { class: 'skeleton', style: 'height:300px; width:100%;' }));
 
   try {
     const res = await api('/api/admin/media');
     const blobs = res.blobs || [];
 
-    container.innerHTML = `
-      <div class="toolbar">
-        <h2 style="font-size: 18px; font-weight: 600;">Media Library (${blobs.length})</h2>
-        <button id="btnUploadMediaFile" class="btn btn-ink btn-sm">
-          <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <span>Upload Image</span>
-        </button>
-        <input type="file" id="mediaDirectInput" multiple accept="image/jpeg,image/png,image/webp" style="display:none;">
-      </div>
+    root.innerHTML = '';
 
-      <!-- Drag & Drop Uploader Banner -->
-      <div id="mediaDropzone" class="dropzone" style="margin-bottom: 24px;">
-        <p>Drop images here to upload directly to Vercel Blob (JPEG, PNG, WebP compressed to max 1600px)</p>
-      </div>
+    const hiddenFile = h('input', {
+      type: 'file',
+      multiple: true,
+      accept: 'image/jpeg,image/png,image/webp',
+      style: 'display:none;'
+    });
 
-      ${blobs.length === 0 ? `
-        <div class="card empty-state">
-          <h3>No media files in storage</h3>
-          <p>Photos uploaded to designs and projects will show up here.</p>
-        </div>
-      ` : `
-        <div class="catalog-grid">
-          ${blobs.map(b => `
-            <div class="catalog-card">
-              <div class="card-media">
-                <img src="${esc(b.url)}" alt="${esc(b.pathname || 'Photo')}" loading="lazy">
-              </div>
-              <div class="card-body">
-                <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                  ${esc(b.pathname ? b.pathname.split('/').pop() : 'Image')}
-                </div>
-                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
-                  ${b.size ? `${Math.round(b.size / 1024)} KB` : ''} · ${b.uploadedAt ? formatRelative(b.uploadedAt) : ''}
-                </div>
-                <div class="card-actions">
-                  <button class="btn btn-outline btn-sm btn-copy-url" data-url="${esc(b.url)}">Copy URL</button>
-                  <button class="btn btn-outline btn-sm btn-del-blob" data-url="${esc(b.url)}" style="margin-left: auto; color: var(--danger);">✕</button>
-                </div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      `}
-    `;
+    const dropzone = h('div', {
+      class: 'uploader-dropzone',
+      style: 'margin-bottom:24px;',
+      onclick: () => hiddenFile.click()
+    },
+      h('p', { html: 'Drag & drop photos here or <strong style="color:var(--bronze); text-decoration:underline;">Browse files</strong>' }),
+      h('span', { class: 'form-hint', text: 'Upload directly to Vercel Blob (JPEG, PNG, WebP up to 3 MB)' })
+    );
 
-    const directInput = container.querySelector('#mediaDirectInput');
-    const uploadBtn = container.querySelector('#btnUploadMediaFile');
-    const dropzone = container.querySelector('#mediaDropzone');
-
-    uploadBtn.onclick = () => directInput.click();
-    dropzone.onclick = () => directInput.click();
-
-    async function handleMediaUpload(files) {
-      if (!files || files.length === 0) return;
-      showToast('Uploading images...', 'info');
-      for (const file of files) {
-        try {
-          await uploadMedia(file);
-        } catch (err) {
-          showToast(`Error: ${err.message}`, 'error');
-        }
-      }
-      showToast('Upload finished', 'success');
-      renderMedia(container);
-    }
-
-    directInput.onchange = () => handleMediaUpload(directInput.files);
+    hiddenFile.onchange = () => handleUpload(hiddenFile.files);
 
     dropzone.ondragover = (e) => { e.preventDefault(); dropzone.classList.add('dragover'); };
     dropzone.ondragleave = () => dropzone.classList.remove('dragover');
     dropzone.ondrop = (e) => {
       e.preventDefault();
       dropzone.classList.remove('dragover');
-      if (e.dataTransfer.files) handleMediaUpload(e.dataTransfer.files);
+      if (e.dataTransfer.files) handleUpload(e.dataTransfer.files);
     };
 
-    // Copy URL
-    container.querySelectorAll('.btn-copy-url').forEach(b => {
-      b.onclick = () => {
-        const url = b.getAttribute('data-url');
-        navigator.clipboard.writeText(url).then(() => {
-          showToast('Image URL copied to clipboard', 'success');
-        });
-      };
-    });
+    async function handleUpload(files) {
+      if (!files || files.length === 0) return;
+      toast('Uploading photos...', 'info');
 
-    // Delete Blob
-    container.querySelectorAll('.btn-del-blob').forEach(b => {
-      b.onclick = async () => {
-        const url = b.getAttribute('data-url');
-        const ok = await confirmDialog({
-          title: 'Delete Image',
-          message: 'Are you sure you want to permanently delete this photo from Blob storage?',
-          confirmText: 'Delete',
-          danger: true
-        });
-        if (ok) {
-          try {
-            await api('/api/admin/media', { method: 'DELETE', body: { url } });
-            showToast('Image deleted', 'info');
-            renderMedia(container);
-          } catch (err) {
-            showToast(err.message, 'error');
-          }
+      for (const file of files) {
+        try {
+          const reader = new FileReader();
+          const base64Promise = new Promise((resolve) => {
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.readAsDataURL(file);
+          });
+          const dataBase64 = await base64Promise;
+          await api('/api/admin/media', {
+            method: 'POST',
+            body: {
+              filename: file.name,
+              contentType: file.type || 'image/jpeg',
+              dataBase64
+            }
+          });
+        } catch (err) {
+          toast(`Failed ${file.name}: ${err.message}`, 'error');
         }
-      };
-    });
+      }
+      toast('Uploaded successfully', 'success');
+      renderMedia(root);
+    }
 
+    const toolbar = h('div', {
+      style: 'display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;'
+    },
+      h('h2', { style: 'font-size:18px; font-weight:600;', text: `Vercel Blob Storage (${blobs.length})` }),
+      h('button', {
+        class: 'btn btn-ink btn-sm',
+        onclick: () => hiddenFile.click()
+      },
+        h('span', { class: 'icon i-layers' }),
+        h('span', { text: 'Upload photo' })
+      )
+    );
+
+    const grid = h('div', { class: 'catalog-grid' });
+
+    if (blobs.length === 0) {
+      grid.appendChild(h('div', { class: 'card', style: 'text-align:center; padding:48px 24px; grid-column:1/-1;' },
+        h('h3', { text: 'No media uploaded' }),
+        h('p', { class: 'form-hint', text: 'Photos added to designs or uploaded directly will be stored in your Vercel Blob bucket.', style: 'margin:8px 0;' })
+      ));
+    } else {
+      blobs.forEach(b => {
+        const card = h('div', { class: 'catalog-card' });
+
+        const media = h('div', { class: 'card-media' },
+          h('img', { src: b.url, alt: b.pathname || 'Media photo', loading: 'lazy' })
+        );
+
+        const fileName = (b.pathname || b.url).split('/').pop();
+        const sizeStr = b.size ? `${Math.round(b.size / 1024)} KB` : '';
+
+        const body = h('div', { class: 'card-body' },
+          h('div', {
+            style: 'font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:4px;',
+            title: fileName,
+            text: fileName
+          }),
+          h('div', { class: 'form-hint', text: `${sizeStr} · ${relTime(b.uploadedAt)}` })
+        );
+
+        const copyBtn = h('button', {
+          class: 'btn btn-outline btn-sm',
+          onclick: () => {
+            navigator.clipboard.writeText(b.url);
+            toast('URL copied to clipboard', 'success');
+          }
+        }, 'Copy URL');
+
+        const delBtn = h('button', {
+          class: 'btn btn-outline btn-sm',
+          style: 'color:var(--danger); margin-left:auto;',
+          onclick: async () => {
+            const ok = await confirmDialog({
+              title: 'Delete Photo',
+              message: 'Permanently remove this photo from Blob storage?',
+              confirmText: 'Delete',
+              danger: true
+            });
+            if (ok) {
+              try {
+                await api('/api/admin/media', {
+                  method: 'DELETE',
+                  body: { url: b.url }
+                });
+                toast('Photo deleted', 'info');
+                renderMedia(root);
+              } catch (err) {
+                toast(err.message, 'error');
+              }
+            }
+          }
+        }, '✕');
+
+        const actions = h('div', { class: 'card-actions' }, copyBtn, delBtn);
+        body.appendChild(actions);
+
+        card.append(media, body);
+        grid.appendChild(card);
+      });
+    }
+
+    root.append(toolbar, dropzone, hiddenFile, grid);
   } catch (err) {
-    container.innerHTML = `<div class="card"><p class="form-error">Failed to load media: ${esc(err.message)}</p></div>`;
+    root.innerHTML = '';
+    root.appendChild(h('div', { class: 'card' }, h('p', { class: 'form-error', text: err.message })));
   }
 }

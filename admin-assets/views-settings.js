@@ -1,255 +1,318 @@
 /**
- * Signage Basket — Views: Settings, Password, Backup & Starter Import
+ * Signage Basket — Views: Settings, Password & Backups
  */
-import { api, esc, showToast, confirmDialog } from './core.js';
+import { api, toast, confirmDialog, h, esc } from './core.js';
+import { importStarterCatalog } from './views-main.js';
 
-export async function renderSettings(container) {
-  container.innerHTML = '<div class="skeleton" style="height: 350px; width: 100%;"></div>';
-
+export async function renderSettings(root) {
+  let settings = {};
   try {
     const res = await api('/api/admin/settings');
-    const settings = res.settings || {};
+    settings = res.settings || {};
+  } catch (err) {
+    toast(`Failed to load settings: ${err.message}`, 'error');
+  }
 
-    container.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 32px; max-width: 800px;">
+  const container = h('div', { style: 'max-width:760px; display:flex; flex-direction:column; gap:24px;' });
 
-        <!-- 1. Business Contact Details -->
-        <div class="card">
-          <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 6px;">Workshop & Contact Information</h2>
-          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
-            These details are displayed on the public website footer, header, and contact pages.
-          </p>
+  // ------------------------------------------
+  // 1. Business Contact Details Card
+  // ------------------------------------------
+  const phoneInp = h('input', {
+    type: 'tel',
+    class: 'form-input',
+    placeholder: '9825000000',
+    value: settings.phone || ''
+  });
+  const phoneErr = h('div', { class: 'form-error', style: 'display:none;' });
 
-          <form id="contactSettingsForm">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-              <div class="form-group">
-                <label class="form-label" for="setPhone">Phone Number</label>
-                <input type="tel" id="setPhone" class="form-input" value="${esc(settings.phone || '')}" placeholder="9825000000">
-                <div class="form-hint">10-digit Indian phone number</div>
-              </div>
+  const waInp = h('input', {
+    type: 'text',
+    class: 'form-input',
+    placeholder: '919825000000',
+    value: settings.whatsapp || ''
+  });
+  const waErr = h('div', { class: 'form-error', style: 'display:none;' });
 
-              <div class="form-group">
-                <label class="form-label" for="setWhatsapp">WhatsApp Number</label>
-                <input type="text" id="setWhatsapp" class="form-input" value="${esc(settings.whatsapp || '')}" placeholder="919825000000">
-                <div class="form-hint">Digits with country code, e.g. 919876543210</div>
-              </div>
-            </div>
+  const emailInp = h('input', {
+    type: 'email',
+    class: 'form-input',
+    placeholder: 'hello@signagebasket.in',
+    value: settings.email || ''
+  });
+  const emailErr = h('div', { class: 'form-error', style: 'display:none;' });
 
-            <div class="form-group">
-              <label class="form-label" for="setEmail">Email Address</label>
-              <input type="email" id="setEmail" class="form-input" value="${esc(settings.email || '')}" placeholder="hello@signagebasket.in">
-            </div>
+  const addrInp = h('textarea', {
+    class: 'form-textarea',
+    rows: 2,
+    placeholder: 'Workshop address in Gandhidham, Gujarat',
+    value: settings.address || ''
+  });
 
-            <div class="form-group">
-              <label class="form-label" for="setAddress">Workshop Address</label>
-              <textarea id="setAddress" class="form-textarea" rows="2" placeholder="Street, Industrial Area, Gandhidham, Gujarat">${esc(settings.address || '')}</textarea>
-            </div>
+  const hoursInp = h('input', {
+    type: 'text',
+    class: 'form-input',
+    placeholder: 'Mon – Sat: 9:30 AM – 7:30 PM',
+    value: settings.hours || ''
+  });
 
-            <div class="form-group">
-              <label class="form-label" for="setHours">Working Hours</label>
-              <input type="text" id="setHours" class="form-input" value="${esc(settings.hours || '')}" placeholder="Mon – Sat: 9:30 AM – 7:30 PM">
-            </div>
+  // ------------------------------------------
+  // 2. Social Links Card
+  // ------------------------------------------
+  const instaInp = h('input', {
+    type: 'url',
+    class: 'form-input',
+    placeholder: 'https://instagram.com/signagebasket',
+    value: settings.instagram || ''
+  });
 
-            <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
-              <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 14px;">Social Media Profiles</h3>
-              <div class="form-group">
-                <label class="form-label" for="setInstagram">Instagram URL</label>
-                <input type="url" id="setInstagram" class="form-input" value="${esc(settings.instagram || '')}" placeholder="https://instagram.com/signagebasket">
-              </div>
+  const fbInp = h('input', {
+    type: 'url',
+    class: 'form-input',
+    placeholder: 'https://facebook.com/signagebasket',
+    value: settings.facebook || ''
+  });
 
-              <div class="form-group">
-                <label class="form-label" for="setFacebook">Facebook URL</label>
-                <input type="url" id="setFacebook" class="form-input" value="${esc(settings.facebook || '')}" placeholder="https://facebook.com/signagebasket">
-              </div>
+  const ytInp = h('input', {
+    type: 'url',
+    class: 'form-input',
+    placeholder: 'https://youtube.com/@signagebasket',
+    value: settings.youtube || ''
+  });
 
-              <div class="form-group">
-                <label class="form-label" for="setYoutube">YouTube URL</label>
-                <input type="url" id="setYoutube" class="form-input" value="${esc(settings.youtube || '')}" placeholder="https://youtube.com/@signagebasket">
-              </div>
-            </div>
+  const saveSettingsBtn = h('button', {
+    type: 'button',
+    class: 'btn btn-ink btn-sm',
+    style: 'margin-top:14px;',
+    onclick: async () => {
+      phoneErr.style.display = 'none';
+      waErr.style.display = 'none';
+      emailErr.style.display = 'none';
 
-            <button type="submit" id="btnSaveSettings" class="btn btn-ink btn-sm" style="margin-top: 10px;">
-              <span>Save Contact Details</span>
-            </button>
-          </form>
-        </div>
+      const phone = phoneInp.value.trim().replace(/\D/g, '');
+      if (phone && phone.length !== 10) {
+        phoneErr.textContent = 'Phone number must be exactly 10 digits';
+        phoneErr.style.display = 'block';
+        return;
+      }
 
-        <!-- 2. Change Password -->
-        <div class="card">
-          <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 6px;">Change Admin Password</h2>
-          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
-            Update the scrypt-hashed credentials used to sign in to this portal.
-          </p>
+      const wa = waInp.value.trim().replace(/\D/g, '');
+      if (wa && (wa.length < 10 || wa.length > 15)) {
+        waErr.textContent = 'Enter WhatsApp digits with country code (e.g. 919876543210)';
+        waErr.style.display = 'block';
+        return;
+      }
 
-          <form id="changePasswordForm">
-            <div class="form-group">
-              <label class="form-label" for="pwdCurrent">Current Password</label>
-              <input type="password" id="pwdCurrent" class="form-input" required autocomplete="current-password">
-            </div>
+      const email = emailInp.value.trim();
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        emailErr.textContent = 'Please enter a valid email address';
+        emailErr.style.display = 'block';
+        return;
+      }
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-              <div class="form-group">
-                <label class="form-label" for="pwdNext">New Password (min 10 chars)</label>
-                <input type="password" id="pwdNext" class="form-input" required minlength="10" autocomplete="new-password">
-                <div class="form-hint" id="pwdStrengthHint">Use a combination of letters, numbers, and symbols.</div>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" for="pwdConfirm">Confirm New Password</label>
-                <input type="password" id="pwdConfirm" class="form-input" required minlength="10" autocomplete="new-password">
-              </div>
-            </div>
-
-            <button type="submit" id="btnChangePassword" class="btn btn-outline btn-sm">
-              <span>Update Password</span>
-            </button>
-          </form>
-        </div>
-
-        <!-- 3. Starter Catalog Importer -->
-        <div class="card">
-          <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 6px;">Starter Designs Catalog</h2>
-          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
-            Import the 33 handcrafted nameplate, LED glow sign, and 3D letters starter designs into MongoDB Atlas. Existing slugs will not be overwritten.
-          </p>
-
-          <button type="button" id="btnImportCatalog" class="btn btn-ink btn-sm">
-            <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-            <span>Import Starter Designs</span>
-          </button>
-        </div>
-
-        <!-- 4. Data Backup -->
-        <div class="card">
-          <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 6px;">Export Data Backup</h2>
-          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
-            Download an offline JSON copy of all designs, projects, client reviews, and customer enquiries.
-          </p>
-
-          <a href="/api/admin/export" download class="btn btn-outline btn-sm">
-            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            <span>Download All Data (JSON)</span>
-          </a>
-        </div>
-
-      </div>
-    `;
-
-    // 1. Contact Form Submit
-    const contactForm = container.querySelector('#contactSettingsForm');
-    contactForm.onsubmit = async (e) => {
-      e.preventDefault();
-      const payload = {
-        phone: container.querySelector('#setPhone').value.trim(),
-        whatsapp: container.querySelector('#setWhatsapp').value.trim(),
-        email: container.querySelector('#setEmail').value.trim(),
-        address: container.querySelector('#setAddress').value.trim(),
-        hours: container.querySelector('#setHours').value.trim(),
-        instagram: container.querySelector('#setInstagram').value.trim(),
-        facebook: container.querySelector('#setFacebook').value.trim(),
-        youtube: container.querySelector('#setYoutube').value.trim()
-      };
+      saveSettingsBtn.disabled = true;
+      saveSettingsBtn.textContent = 'Saving...';
 
       try {
         await api('/api/admin/settings', {
           method: 'PUT',
-          body: payload
+          body: {
+            phone,
+            whatsapp: wa,
+            email,
+            address: addrInp.value.trim(),
+            hours: hoursInp.value.trim(),
+            instagram: instaInp.value.trim(),
+            facebook: fbInp.value.trim(),
+            youtube: ytInp.value.trim()
+          }
         });
-        showToast('Settings saved successfully', 'success');
+        toast('Settings saved successfully', 'success');
       } catch (err) {
-        showToast(err.message, 'error');
+        toast(err.message, 'error');
+      } finally {
+        saveSettingsBtn.disabled = false;
+        saveSettingsBtn.textContent = 'Save details';
       }
-    };
+    }
+  }, 'Save details');
 
-    // 2. Change Password Submit
-    const pwdForm = container.querySelector('#changePasswordForm');
-    pwdForm.onsubmit = async (e) => {
+  const businessCard = h('div', { class: 'card' },
+    h('h3', { text: 'Business details', style: 'font-size:17px; font-weight:600; margin-bottom:6px;' }),
+    h('p', { class: 'form-hint', style: 'margin-bottom:18px;', text: 'Displayed in public footer, contact page, and quote enquiries.' }),
+
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Phone number' }),
+      phoneInp,
+      phoneErr,
+      h('span', { class: 'form-hint', text: '10 digits' })
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'WhatsApp number' }),
+      waInp,
+      waErr,
+      h('span', { class: 'form-hint', text: 'Digits with country code, e.g. 919876543210' })
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Email' }),
+      emailInp,
+      emailErr
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Address' }),
+      addrInp
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Working hours' }),
+      hoursInp
+    ),
+    h('div', { style: 'margin-top:20px; padding-top:16px; border-top:1px solid var(--border);' },
+      h('h4', { style: 'font-size:15px; font-weight:600; margin-bottom:12px;', text: 'Social links' }),
+      h('div', { class: 'form-group' },
+        h('label', { class: 'form-label', text: 'Instagram URL' }),
+        instaInp
+      ),
+      h('div', { class: 'form-group' },
+        h('label', { class: 'form-label', text: 'Facebook URL' }),
+        fbInp
+      ),
+      h('div', { class: 'form-group' },
+        h('label', { class: 'form-label', text: 'YouTube URL' }),
+        ytInp
+      )
+    ),
+    saveSettingsBtn
+  );
+
+  // ------------------------------------------
+  // 3. Change Password Card
+  // ------------------------------------------
+  const currentPassInp = h('input', { type: 'password', class: 'form-input', required: true });
+  const newPassInp = h('input', { type: 'password', class: 'form-input', required: true, minlength: 10 });
+  const confirmPassInp = h('input', { type: 'password', class: 'form-input', required: true });
+
+  const strengthBar = h('div', { class: 'checklist-bar', style: 'margin:8px 0 4px;' });
+  const strengthFill = h('div', { class: 'checklist-fill', style: 'width:0%;' });
+  strengthBar.appendChild(strengthFill);
+
+  const strengthText = h('div', { class: 'form-hint', text: 'Minimum 10 characters' });
+
+  newPassInp.oninput = () => {
+    const val = newPassInp.value;
+    let score = 0;
+    if (val.length >= 10) score += 30;
+    if (/[A-Z]/.test(val)) score += 20;
+    if (/[0-9]/.test(val)) score += 25;
+    if (/[^A-Za-z0-9]/.test(val)) score += 25;
+
+    strengthFill.style.width = `${Math.min(100, score)}%`;
+    if (score < 50) {
+      strengthFill.style.backgroundColor = 'var(--danger)';
+      strengthText.textContent = 'Weak (add numbers/symbols)';
+    } else if (score < 75) {
+      strengthFill.style.backgroundColor = '#f59e0b';
+      strengthText.textContent = 'Medium strength';
+    } else {
+      strengthFill.style.backgroundColor = 'var(--success)';
+      strengthText.textContent = 'Strong password';
+    }
+  };
+
+  const passErr = h('div', { class: 'form-error', style: 'display:none; margin-bottom:10px;' });
+
+  const passForm = h('form', {
+    onsubmit: async (e) => {
       e.preventDefault();
-      const current = container.querySelector('#pwdCurrent').value;
-      const next = container.querySelector('#pwdNext').value;
-      const confirm = container.querySelector('#pwdConfirm').value;
+      passErr.style.display = 'none';
 
-      if (next !== confirm) {
-        showToast('New passwords do not match', 'error');
+      const cur = currentPassInp.value;
+      const next = newPassInp.value;
+      const conf = confirmPassInp.value;
+
+      if (next.length < 10) {
+        passErr.textContent = 'New password must be at least 10 characters long';
+        passErr.style.display = 'block';
         return;
       }
-      if (next.length < 10) {
-        showToast('Password must be at least 10 characters', 'error');
+      if (next !== conf) {
+        passErr.textContent = 'New passwords do not match';
+        passErr.style.display = 'block';
         return;
       }
 
       try {
         await api('/api/auth/change-password', {
           method: 'POST',
-          body: { current, next }
+          body: { current: cur, next }
         });
-        showToast('Password changed successfully', 'success');
-        pwdForm.reset();
+        toast('Password updated successfully', 'success');
+        currentPassInp.value = '';
+        newPassInp.value = '';
+        confirmPassInp.value = '';
+        strengthFill.style.width = '0%';
+        strengthText.textContent = 'Minimum 10 characters';
       } catch (err) {
-        showToast(err.message, 'error');
+        passErr.textContent = err.message;
+        passErr.style.display = 'block';
       }
-    };
+    }
+  },
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Current password' }),
+      currentPassInp
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'New password' }),
+      newPassInp,
+      strengthBar,
+      strengthText
+    ),
+    h('div', { class: 'form-group' },
+      h('label', { class: 'form-label', text: 'Confirm new password' }),
+      confirmPassInp
+    ),
+    passErr,
+    h('button', { type: 'submit', class: 'btn btn-outline btn-sm' }, 'Change password')
+  );
 
-    // 3. Import Starter Designs
-    const importBtn = container.querySelector('#btnImportCatalog');
-    importBtn.onclick = async () => {
-      const items = [];
-      if (window.CATALOG) {
-        for (const [categoryKey, catData] of Object.entries(window.CATALOG)) {
-          if (Array.isArray(catData.items)) {
-            for (const it of catData.items) {
-              items.push({
-                category: categoryKey,
-                slug: it.slug,
-                name: it.name,
-                material: it.material || '',
-                desc: it.desc || '',
-                finishes: it.finishes || catData.defaults?.finishes || [],
-                sizes: it.sizes || catData.defaults?.sizes || [],
-                tags: it.tags || [],
-                price: it.price || null,
-                plate: it.plate || null,
-                status: 'published',
-                featured: false
-              });
-            }
-          }
-        }
-      }
+  const passCard = h('div', { class: 'card' },
+    h('h3', { text: 'Change password', style: 'font-size:17px; font-weight:600; margin-bottom:6px;' }),
+    h('p', { class: 'form-hint', style: 'margin-bottom:18px;', text: 'Change your admin credentials (scrypt-hashed with salt).' }),
+    passForm
+  );
 
-      if (items.length === 0) {
-        showToast('Starter catalog data not loaded from /js/catalog.js', 'error');
-        return;
-      }
+  // ------------------------------------------
+  // 4. Starter Designs Card
+  // ------------------------------------------
+  const starterCard = h('div', { class: 'card' },
+    h('h3', { text: 'Starter designs', style: 'font-size:17px; font-weight:600; margin-bottom:6px;' }),
+    h('p', { class: 'form-hint', style: 'margin-bottom:14px;', text: 'Import catalog items from /js/catalog.js into your MongoDB database.' }),
+    h('button', {
+      type: 'button',
+      class: 'btn btn-ink btn-sm',
+      onclick: () => importStarterCatalog()
+    },
+      h('span', { class: 'icon i-plate' }),
+      h('span', { text: 'Import starter designs' })
+    )
+  );
 
-      const confirmed = await confirmDialog({
-        title: 'Import Starter Designs',
-        message: `Found ${items.length} starter designs across 5 categories. Proceed with import? Existing designs with matching slugs will not be changed.`,
-        confirmText: `Import ${items.length} Designs`
-      });
+  // ------------------------------------------
+  // 5. Data Backup Card
+  // ------------------------------------------
+  const backupCard = h('div', { class: 'card' },
+    h('h3', { text: 'Backup', style: 'font-size:17px; font-weight:600; margin-bottom:6px;' }),
+    h('p', { class: 'form-hint', style: 'margin-bottom:14px;', text: 'Export all designs, projects, client reviews, and enquiries as a single JSON file.' }),
+    h('a', {
+      href: '/api/admin/export',
+      download: `signage-basket-backup-${new Date().toISOString().slice(0, 10)}.json`,
+      class: 'btn btn-outline btn-sm'
+    },
+      h('span', { class: 'icon i-arrow-up' }),
+      h('span', { text: 'Download all data (JSON)' })
+    )
+  );
 
-      if (confirmed) {
-        importBtn.disabled = true;
-        importBtn.innerHTML = '<span>Importing...</span>';
-        try {
-          const res = await api('/api/admin/designs/import', {
-            method: 'POST',
-            body: { items }
-          });
-          showToast(`Imported ${res.imported} new designs (${res.skipped} skipped)`, 'success');
-        } catch (err) {
-          showToast(err.message, 'error');
-        } finally {
-          importBtn.disabled = false;
-          importBtn.innerHTML = `
-            <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-            <span>Import Starter Designs</span>
-          `;
-        }
-      }
-    };
-
-  } catch (err) {
-    container.innerHTML = `<div class="card"><p class="form-error">Failed to load settings: ${esc(err.message)}</p></div>`;
-  }
+  container.append(businessCard, passCard, starterCard, backupCard);
+  root.appendChild(container);
 }

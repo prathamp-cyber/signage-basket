@@ -3,7 +3,7 @@
  * Single catch-all function handling Public, Auth, and Admin routes.
  */
 const { ObjectId } = require('mongodb');
-const { getDb, col } = require('./_lib/db');
+const { getDb } = require('./_lib/db');
 const {
   parseBody,
   sendJson,
@@ -14,7 +14,7 @@ const {
   isValidIndianPhone,
   isValidEmail,
   isValidRating,
-  isValidMediaUrl,
+  isValidImageUrl,
   checkRateLimit
 } = require('./_lib/util');
 const {
@@ -42,7 +42,6 @@ module.exports = async function handler(req, res) {
   const method = (req.method || 'GET').toUpperCase();
   const searchParams = parsedUrl.searchParams;
 
-  // Handle CORS preflight if any
   if (method === 'OPTIONS') {
     res.statusCode = 204;
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -51,7 +50,6 @@ module.exports = async function handler(req, res) {
     return res.end();
   }
 
-  // Determine caching header based on path
   const isPublicGet = method === 'GET' && (pathname.startsWith('/api/public') || pathname === '/api/sitemap' || pathname === '/api/sitemap.xml');
   if (isPublicGet) {
     res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
@@ -156,6 +154,7 @@ module.exports = async function handler(req, res) {
         } : null,
         details: body.details && typeof body.details === 'object' ? body.details : {},
         status: 'new',
+        seen: false,
         notes: '',
         createdAt: new Date()
       };
@@ -225,7 +224,7 @@ module.exports = async function handler(req, res) {
       const ip = getClientIp(req);
       const allowed = await checkRateLimit(db, `login:${ip}`, 5, 900); // 5 attempts per 15 min
       if (!allowed) {
-        return sendJson(res, 429, { ok: false, error: 'Too many login attempts. Please wait 15 minutes before trying again.' });
+        return sendJson(res, 429, { ok: false, error: 'Too many login attempts. Please try again in 15 minutes.' });
       }
 
       const body = await parseBody(req);
@@ -239,7 +238,7 @@ module.exports = async function handler(req, res) {
       const isPassMatch = verifyPassword(passwordInput, expectedHash);
 
       if (!isUserMatch || !isPassMatch) {
-        return sendJson(res, 401, { ok: false, error: 'Incorrect username or password.' });
+        return sendJson(res, 401, { ok: false, error: 'Incorrect username or password' });
       }
 
       const nowSec = Math.floor(Date.now() / 1000);
@@ -374,7 +373,7 @@ module.exports = async function handler(req, res) {
           name: name.slice(0, 150),
           material: String(body.material || '').slice(0, 100),
           tags: Array.isArray(body.tags) ? body.tags.map(t => String(t).trim().toLowerCase()).filter(Boolean) : [],
-          desc: String(body.desc || '').slice(0, 600),
+          desc: String(body.desc || '').slice(0, 400),
           finishes: Array.isArray(body.finishes) ? body.finishes.map(f => String(f).trim()).filter(Boolean) : [],
           sizes: Array.isArray(body.sizes) ? body.sizes.map(s => String(s).trim()).filter(Boolean) : [],
           price: body.price !== null && body.price !== '' && !isNaN(Number(body.price)) ? Number(body.price) : null,
@@ -419,10 +418,10 @@ module.exports = async function handler(req, res) {
             name: it.name || it.slug,
             material: it.material || '',
             tags: Array.isArray(it.tags) ? it.tags : [],
-            desc: it.desc || '',
+            desc: String(it.desc || '').slice(0, 400),
             finishes: Array.isArray(it.finishes) ? it.finishes : [],
             sizes: Array.isArray(it.sizes) ? it.sizes : [],
-            price: it.price || null,
+            price: it.price !== null && it.price !== '' && !isNaN(Number(it.price)) ? Number(it.price) : null,
             images: Array.isArray(it.images) ? it.images : [],
             plate: it.plate || null,
             status: it.status || 'published',
@@ -503,7 +502,7 @@ module.exports = async function handler(req, res) {
             name: name.slice(0, 150),
             material: String(body.material || '').slice(0, 100),
             tags: Array.isArray(body.tags) ? body.tags.map(t => String(t).trim().toLowerCase()).filter(Boolean) : [],
-            desc: String(body.desc || '').slice(0, 600),
+            desc: String(body.desc || '').slice(0, 400),
             finishes: Array.isArray(body.finishes) ? body.finishes.map(f => String(f).trim()).filter(Boolean) : [],
             sizes: Array.isArray(body.sizes) ? body.sizes.map(s => String(s).trim()).filter(Boolean) : [],
             price: body.price !== null && body.price !== '' && !isNaN(Number(body.price)) ? Number(body.price) : null,
@@ -782,6 +781,15 @@ module.exports = async function handler(req, res) {
         return sendJson(res, 200, { ok: true, modifiedCount: result.modifiedCount });
       }
 
+      if (pathname === '/api/admin/enquiries' && method === 'DELETE') {
+        // Bulk delete
+        const body = await parseBody(req);
+        const ids = Array.isArray(body.ids) ? body.ids : [];
+        const objectIds = ids.map(id => ObjectId.isValid(id) ? new ObjectId(id) : id);
+        const result = await db.collection('enquiries').deleteMany({ _id: { $in: objectIds } });
+        return sendJson(res, 200, { ok: true, deletedCount: result.deletedCount });
+      }
+
       const enquiryMatch = pathname.match(/^\/api\/admin\/enquiries\/([a-zA-Z0-9_-]+)$/);
       if (enquiryMatch) {
         const enquiryId = enquiryMatch[1];
@@ -800,6 +808,10 @@ module.exports = async function handler(req, res) {
 
           if (body.notes !== undefined) {
             update.notes = String(body.notes || '').slice(0, 2000);
+          }
+
+          if (body.seen !== undefined) {
+            update.seen = Boolean(body.seen);
           }
 
           const result = await db.collection('enquiries').updateOne(toIdQuery(enquiryId), { $set: update });
@@ -908,14 +920,16 @@ module.exports = async function handler(req, res) {
       if (pathname === '/api/admin/media' && method === 'GET') {
         const { list } = await import('@vercel/blob');
         const result = await list({ token: process.env.BLOB_READ_WRITE_TOKEN });
-        const blobs = (result.blobs || []).sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+        const blobs = (result.blobs || [])
+          .map(b => ({ url: b.url, size: b.size, uploadedAt: b.uploadedAt, pathname: b.pathname }))
+          .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
         return sendJson(res, 200, { ok: true, blobs });
       }
 
       if (pathname === '/api/admin/media' && method === 'DELETE') {
         const body = await parseBody(req);
         const { url } = body;
-        if (!url || typeof url !== 'string' || !isValidMediaUrl(url)) {
+        if (!url || typeof url !== 'string' || !isValidImageUrl(url)) {
           return sendJson(res, 400, { ok: false, error: 'Invalid Blob URL.' });
         }
 
