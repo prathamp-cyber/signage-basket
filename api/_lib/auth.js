@@ -105,7 +105,8 @@ async function getStoredPasswordHash(db) {
   } catch (err) {
     console.warn('Could not query admin collection:', err.message);
   }
-  return process.env.ADMIN_PASSWORD_HASH || '';
+  // Default fallback hash for password "admin123" if no custom env var is set
+  return process.env.ADMIN_PASSWORD_HASH || '331ede4bc1d36862b3483d1dbffad5c0:7b787984125d3a1ab7954532b7c18ad2214778252c8d02bf2bc6e9760ed9fe29e46677743c05edc7e0d7336dad7f890ce289237eaad4c2a8dec4b126b6dc7cf5';
 }
 
 function checkCsrf(req) {
