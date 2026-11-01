@@ -38,7 +38,17 @@ function toIdQuery(id) {
 module.exports = async function handler(req, res) {
   const host = req.headers.host || 'localhost';
   const parsedUrl = new URL(req.url, `http://${host}`);
-  const pathname = parsedUrl.pathname.replace(/\/+$/, '') || '/';
+
+  // 1) Read __path query parameter or fallback to pathname stripped of /api
+  const queryPath = parsedUrl.searchParams.get('__path');
+  let cleanSubPath = '';
+  if (queryPath !== null && queryPath !== undefined) {
+    cleanSubPath = String(queryPath).trim().replace(/^\/+/, '').replace(/\/+$/, '');
+  } else {
+    cleanSubPath = parsedUrl.pathname.replace(/^\/api\/?/, '').replace(/\/+$/, '');
+  }
+
+  const pathname = cleanSubPath ? `/api/${cleanSubPath}` : '/api';
   const method = (req.method || 'GET').toUpperCase();
   const searchParams = parsedUrl.searchParams;
 
@@ -48,6 +58,20 @@ module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
     return res.end();
+  }
+
+  // GET /api/health
+  if (pathname === '/api/health' && method === 'GET') {
+    let dbOk = false;
+    try {
+      const pingDb = await getDb();
+      await pingDb.command({ ping: 1 });
+      dbOk = true;
+    } catch (_) {
+      dbOk = false;
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    return sendJson(res, 200, { ok: true, time: new Date().toISOString(), db: dbOk });
   }
 
   const isPublicGet = method === 'GET' && (pathname.startsWith('/api/public') || pathname === '/api/sitemap' || pathname === '/api/sitemap.xml');

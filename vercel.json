@@ -3,6 +3,14 @@
   "trailingSlash": false,
   "rewrites": [
     {
+      "source": "/api/:path((?!index$).*)",
+      "destination": "/api/index?__path=:path"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/index?__path=sitemap"
+    },
+    {
       "source": "/admin",
       "destination": "/admin.html"
     },
