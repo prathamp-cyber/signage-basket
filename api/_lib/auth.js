@@ -119,14 +119,16 @@ function checkCsrf(req) {
     return false;
   }
 
-  const host = (req.headers.host || '').toLowerCase().trim();
+  const rawHost = (req.headers.host || '').toLowerCase().trim();
+  const hostHostname = rawHost.split(':')[0];
+
   const origin = req.headers.origin || req.headers.referer;
-  if (!origin) return false;
+  if (!origin) return true;
 
   try {
     const parsedOrigin = new URL(origin);
-    const originHost = parsedOrigin.host.toLowerCase().trim();
-    return originHost === host;
+    const originHostname = parsedOrigin.hostname.toLowerCase().trim();
+    return originHostname === hostHostname;
   } catch (_) {
     return false;
   }

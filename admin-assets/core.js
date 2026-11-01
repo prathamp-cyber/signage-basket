@@ -142,7 +142,9 @@ export async function api(path, { method = 'GET', body = null } = {}) {
 
   if (res.status === 401) {
     state.user = null;
-    showLoginScreen();
+    if (path !== '/api/auth/me' && path !== '/api/auth/login') {
+      showLoginScreen();
+    }
     throw new Error('Authentication required');
   }
 
@@ -566,7 +568,13 @@ export function photoUploader({ images = [], onChange, max = 20 }) {
 // ------------------------------------------
 function showLoginScreen() {
   const app = document.getElementById('app');
+  if (!app) return;
   app.innerHTML = '';
+
+  // Clean any accidental URL query strings (e.g. ?username=...)
+  if (window.location.search) {
+    window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+  }
 
   const wrap = h('div', { class: 'login-wrap' });
   const card = h('div', { class: 'login-card' });
@@ -576,20 +584,27 @@ function showLoginScreen() {
     h('p', { class: 'form-hint', text: 'Admin Portal Sign In' })
   );
 
-  const errorEl = h('div', { class: 'form-error', style: 'display:none; margin-bottom:14px;' });
+  const errorEl = h('div', {
+    class: 'form-error',
+    style: 'display:none; color:#c62828; margin-top:14px; margin-bottom:14px; font-size:13px; text-align:center; line-height:1.4;'
+  });
 
   const userInp = h('input', {
     type: 'text',
+    name: 'username',
     class: 'form-input',
     required: true,
-    autocomplete: 'username'
+    autocomplete: 'username',
+    placeholder: 'Enter username'
   });
 
   const passInp = h('input', {
     type: 'password',
+    name: 'password',
     class: 'form-input',
     required: true,
-    autocomplete: 'current-password'
+    autocomplete: 'current-password',
+    placeholder: 'Enter password'
   });
 
   const toggleBtn = h('button', {
@@ -607,33 +622,37 @@ function showLoginScreen() {
     style: 'width:100%; margin-top:8px;'
   }, 'Sign in');
 
-  const form = h('form', {
-    onsubmit: async (e) => {
-      e.preventDefault();
-      errorEl.style.display = 'none';
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Signing in...';
+  const statusLine = h('div', {
+    class: 'login-status-line',
+    style: 'margin-top:18px; font-size:12px; text-align:center; color:#777;'
+  }, 'Checking server status...');
 
-      try {
-        const res = await api('/api/auth/login', {
-          method: 'POST',
-          body: {
-            username: userInp.value.trim(),
-            password: passInp.value
-          }
-        });
-        state.user = res.user;
-        toast('Signed in successfully', 'success');
-        mountAppShell();
-        navigate();
-      } catch (err) {
-        errorEl.textContent = err.message;
-        errorEl.style.display = 'block';
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Sign in';
+  // Call GET /api/health once on load
+  fetch('/api/health', {
+    headers: { 'X-Requested-With': 'sb-admin' }
+  })
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    })
+    .then(data => {
+      if (data && data.db === true) {
+        statusLine.style.color = '#555';
+        statusLine.textContent = 'Server: online · Database: connected';
+      } else {
+        statusLine.style.color = '#c62828';
+        statusLine.textContent = 'Database: not connected';
       }
-    }
+    })
+    .catch(() => {
+      statusLine.style.color = '#c62828';
+      statusLine.textContent = 'Server: not reachable';
+    });
+
+  const form = h('form', {
+    method: 'post',
+    action: 'javascript:void(0)',
+    autocomplete: 'on'
   },
     h('div', { class: 'form-group' },
       h('label', { class: 'form-label', text: 'Username' }),
@@ -643,9 +662,89 @@ function showLoginScreen() {
       h('label', { class: 'form-label', text: 'Password' }),
       h('div', { class: 'pwd-wrap' }, passInp, toggleBtn)
     ),
+    submitBtn,
     errorEl,
-    submitBtn
+    statusLine
   );
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorEl.style.display = 'none';
+    errorEl.textContent = '';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Signing in...';
+
+    const username = userInp.value.trim();
+    const password = passInp.value;
+
+    try {
+      let res;
+      try {
+        res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'sb-admin'
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({ username, password })
+        });
+      } catch (netErr) {
+        console.error('Login network error:', netErr);
+        errorEl.textContent = 'Cannot reach the server. Check your internet connection.';
+        errorEl.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Sign in';
+        return;
+      }
+
+      const resText = await res.text();
+      let resData = null;
+      try {
+        resData = JSON.parse(resText);
+      } catch (_) {}
+
+      if (!res.ok || !resData || resData.ok !== true) {
+        console.error('Login failed HTTP status:', res.status, 'body:', resText);
+        if (res.status === 404) {
+          errorEl.textContent = 'The server API was not found. Redeploy the project on Vercel.';
+        } else if (res.status === 400 || res.status === 401) {
+          errorEl.textContent = (resData && resData.error) || 'Incorrect username or password';
+        } else if (res.status === 429) {
+          errorEl.textContent = (resData && resData.error) || 'Too many attempts. Please try again later.';
+        } else {
+          errorEl.textContent = 'Server error. Check the Vercel environment variables (MONGODB_URI, ADMIN_USERNAME, ADMIN_PASSWORD_HASH, ADMIN_JWT_SECRET) and the Vercel logs.';
+        }
+        errorEl.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Sign in';
+        return;
+      }
+
+      // Successful login
+      try {
+        const meRes = await fetch('/api/auth/me', {
+          credentials: 'same-origin',
+          headers: { 'X-Requested-With': 'sb-admin' }
+        });
+        const meData = await meRes.json().catch(() => ({}));
+        state.user = meData.user || resData.user || username;
+      } catch (_) {
+        state.user = resData.user || username;
+      }
+
+      toast('Signed in successfully', 'success');
+      mountAppShell();
+      window.location.hash = '#/dashboard';
+      navigate();
+    } catch (err) {
+      console.error('Unexpected login exception:', err);
+      errorEl.textContent = 'Server error. Check the Vercel environment variables (MONGODB_URI, ADMIN_USERNAME, ADMIN_PASSWORD_HASH, ADMIN_JWT_SECRET) and the Vercel logs.';
+      errorEl.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Sign in';
+    }
+  });
 
   card.append(head, form);
   wrap.appendChild(card);
@@ -892,6 +991,9 @@ async function navigate() {
 // Initialization
 // ------------------------------------------
 async function init() {
+  if (window.location.search) {
+    window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+  }
   try {
     const res = await api('/api/auth/me');
     state.user = res.user;

@@ -273,7 +273,7 @@ module.exports = async function handler(req, res) {
       });
 
       res.setHeader('Set-Cookie', createAuthCookie(token));
-      return sendJson(res, 200, { ok: true, user: { username: expectedUser } });
+      return sendJson(res, 200, { ok: true, user: expectedUser });
     }
 
     // POST /api/auth/logout
@@ -289,7 +289,7 @@ module.exports = async function handler(req, res) {
     if (pathname === '/api/auth/me' && method === 'GET') {
       try {
         const payload = requireAuth(req);
-        return sendJson(res, 200, { ok: true, user: { username: payload.sub } });
+        return sendJson(res, 200, { ok: true, user: payload.sub });
       } catch (err) {
         return sendJson(res, 401, { ok: false, error: err.message || 'Unauthorized' });
       }
