@@ -368,9 +368,31 @@
 
   <script src="/js/config.js"></script>
   <script src="/js/catalog.js"></script>
+  <script src="/js/data.js"></script>
   <script src="/js/products.js"></script>
   <script src="/js/search.js"></script>
   <script src="/js/layout.js"></script>
   <script src="/js/main.js"></script>
+  <script>
+  function updateCollectionButtons() {
+    const catalog = (window.SBData && window.SBData.catalog) ? window.SBData.catalog() : (window.CATALOG || {});
+    for (const catKey in catalog) {
+      const cat = catalog[catKey];
+      const article = document.getElementById(catKey);
+      if (article && cat) {
+        const btn = article.querySelector(".btn-outline");
+        if (btn) {
+          btn.href = cat.page;
+          const textSpan = btn.querySelector("span:not(.btn-arrow)");
+          if (textSpan) textSpan.textContent = "Browse " + cat.title;
+        }
+      }
+    }
+  }
+  document.addEventListener("DOMContentLoaded", updateCollectionButtons);
+  if (window.SBData && window.SBData.ready) {
+    window.SBData.ready.then(updateCollectionButtons);
+  }
+  </script>
 </body>
 </html>

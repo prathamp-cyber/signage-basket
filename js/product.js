@@ -4,13 +4,14 @@
  */
 
 (function () {
-  try {
-    const config = window.SIGNAGE_CONFIG || {
-      brandName: "Signage Basket",
-      city: "Gandhidham",
-      whatsappRaw: "919999999999",
-      SITE_URL: "https://www.signagebasket.in"
-    };
+  function renderProductPage() {
+    try {
+      const config = (window.SBData && window.SBData.settings) ? window.SBData.settings() : (window.SIGNAGE_CONFIG || {
+        brandName: "Signage Basket",
+        city: "Gandhidham",
+        whatsappRaw: "919999999999",
+        SITE_URL: "https://www.signagebasket.in"
+      });
 
     // 1. Resolve design slug from path or search params
     function getDesignSlug() {
@@ -30,17 +31,16 @@
     let category = null;
     let categoryKey = null;
 
-    if (window.CATALOG) {
-      for (const catK in window.CATALOG) {
-        const cat = window.CATALOG[catK];
-        if (cat && Array.isArray(cat.items)) {
-          const found = cat.items.find((p) => p.slug === slug);
-          if (found) {
-            item = found;
-            category = cat;
-            categoryKey = catK;
-            break;
-          }
+    const catalog = (window.SBData && window.SBData.catalog) ? window.SBData.catalog() : (window.CATALOG || {});
+    for (const catK in catalog) {
+      const cat = catalog[catK];
+      if (cat && Array.isArray(cat.items)) {
+        const found = cat.items.find((p) => p.slug === slug);
+        if (found) {
+          item = found;
+          category = cat;
+          categoryKey = catK;
+          break;
         }
       }
     }
@@ -168,7 +168,9 @@
     }
 
     // 5. Build Initial Page Structure
-    const priceText = item.price ? `From ₹${item.price}` : "Price on request";
+    const priceText = (typeof item.price === "number" && item.price > 0)
+      ? `From ₹${item.price.toLocaleString("en-IN")}`
+      : (item.price ? `From ₹${item.price}` : "Price on request");
 
     appContainer.innerHTML = `
       <div class="product-page-section">
@@ -202,6 +204,7 @@
             <div class="product-details-wrap">
               <a href="${category.page}" class="product-collection-eyebrow">Collection: ${category.title}</a>
               <h1 class="product-title">${item.name}</h1>
+              ${item.featured ? '<span class="product-badge" style="display:inline-block;margin-bottom:0.75rem;">Popular</span>' : ''}
               <div class="product-material-sub">${item.material}</div>
               <div class="product-price-row">${priceText}</div>
               <p class="product-promise-note">Made to order in Gandhidham. Free design preview before we make it.</p>
@@ -418,6 +421,7 @@
               <textarea id="quoteNotes" class="quote-textarea" placeholder="Any specific requirements, fonts, or questions..."></textarea>
             </div>
 
+            <input type="text" name="website" style="display:none !important; position:absolute !important; left:-9999px !important;" tabindex="-1" autocomplete="off">
             <button type="submit" class="btn btn-primary quote-modal-submit-btn" id="quoteSubmitBtn">
               <span>Send Request on WhatsApp</span>
               <span class="btn-arrow" aria-hidden="true"><span class="icon i-arrow-right"></span></span>
@@ -444,7 +448,22 @@
     let currentSlides = [];
 
     function updateGallery() {
-      currentSlides = window.plateSlides(item, customLines);
+      const hasImages = Array.isArray(item.images) && item.images.length > 0;
+      if (hasImages) {
+        currentSlides = item.images.map((img, idx) => {
+          const src = typeof img === "string" ? img : img.url;
+          const alt = (typeof img === "object" && img.alt) ? img.alt : `${item.name} - Image ${idx + 1}`;
+          return {
+            title: alt,
+            html: `<img src="${src}" alt="${alt.replace(/"/g, '&quot;')}" loading="${idx === 0 ? 'eager' : 'lazy'}" width="800" height="600" style="width:100%;height:100%;object-fit:cover;" class="product-gallery-photo">`
+          };
+        });
+        const lineWrap = document.getElementById("lineInputsWrap");
+        const lineGroup = lineWrap ? lineWrap.closest(".customizer-group") : null;
+        if (lineGroup) lineGroup.style.display = "none";
+      } else {
+        currentSlides = window.plateSlides(item, customLines);
+      }
       const stageSlidesEl = document.getElementById("stageSlides");
       const thumbsRowEl = document.getElementById("thumbsRow");
       const counterEl = document.getElementById("galleryCounter");
@@ -781,6 +800,9 @@
 
         if (!isValid) return;
 
+        const hpVal = quoteForm.querySelector("input[name='website']")?.value || "";
+        if (hpVal) return;
+
         // Build neat WhatsApp quote message
         const waLines = [
           `Hi Signage Basket, I would like to get a quote for a custom ${catSingular.toLowerCase()}:`,
@@ -801,17 +823,45 @@
         if (cityVal)  waLines.push(`- City: ${cityVal}`);
         if (notesVal) waLines.push(`- Notes: ${notesVal}`);
 
-        const waUrl = `https://wa.me/${config.whatsappRaw || '919999999999'}?text=${encodeURIComponent(waLines.join("\n"))}`;
+        const cfg = (window.SBData && window.SBData.settings) ? window.SBData.settings() : (window.SIGNAGE_CONFIG || {});
+        const waRaw = cfg.whatsappRaw || "919999999999";
+        const waUrl = `https://wa.me/${waRaw}?text=${encodeURIComponent(waLines.join("\n"))}`;
 
-        // Attempt opening WhatsApp popup
-        window.open(waUrl, "_blank");
+        const payload = {
+          source: "product",
+          name: nameVal,
+          phone: phoneVal,
+          email: emailVal,
+          city: cityVal,
+          message: notesVal || "",
+          design: {
+            slug: item.slug,
+            name: item.name,
+            category: category.title || categoryKey
+          },
+          details: {
+            finish: selectedFinish,
+            size: selectedSize,
+            textLines: customLines,
+            wallSize: currentWallSize
+          },
+          website: hpVal
+        };
 
-        // Show success state
-        quoteForm.style.display = "none";
-        if (quoteSuccess) {
-          quoteSuccess.style.display = "block";
-          if (openWaAgainBtn) openWaAgainBtn.href = waUrl;
-        }
+        const submitBtn = quoteForm.querySelector("button[type='submit']");
+        if (submitBtn) submitBtn.disabled = true;
+
+        const sendPromise = (window.SB && window.SB.sendEnquiry) ? window.SB.sendEnquiry(payload) : Promise.resolve();
+        const timeoutPromise = new Promise((r) => setTimeout(r, 1000));
+
+        Promise.race([sendPromise, timeoutPromise]).finally(() => {
+          window.open(waUrl, "_blank");
+          quoteForm.style.display = "none";
+          if (quoteSuccess) {
+            quoteSuccess.style.display = "block";
+            if (openWaAgainBtn) openWaAgainBtn.href = waUrl;
+          }
+        });
       });
     }
 
@@ -866,18 +916,42 @@
       const top4 = scored.slice(0, 4).map((s) => s.item);
 
       relatedGrid.innerHTML = top4.map((p) => {
-        const plateHtml = window.renderPlate(p.plate);
+        const hasImages = Array.isArray(p.images) && p.images.length > 0;
+        let mediaHtml = "";
+        if (hasImages) {
+          const firstImg = p.images[0];
+          const src = typeof firstImg === "string" ? firstImg : firstImg.url;
+          const alt = (typeof firstImg === "object" && firstImg.alt) ? firstImg.alt : `${p.name} design by Signage Basket`;
+          mediaHtml = `<img src="${src}" alt="${alt.replace(/"/g, '&quot;')}" width="500" height="500" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';">`;
+        } else {
+          mediaHtml = window.renderPlate ? window.renderPlate(p.plate) : "";
+        }
+
+        const badgeHtml = p.featured
+          ? `<span class="product-badge" style="position:absolute;top:10px;left:10px;z-index:2;">Popular</span>`
+          : "";
+
+        const pPrice = (typeof p.price === "number" && p.price > 0)
+          ? `From ₹${p.price.toLocaleString("en-IN")}`
+          : (p.price ? `From ₹${p.price}` : "Price on request");
+
         return `
           <article class="catalog-card" data-slug="${p.slug}">
-            <div class="catalog-card-media">
-              ${plateHtml}
+            <div class="catalog-card-media" style="position:relative;">
+              <a href="/design/${encodeURIComponent(p.slug)}" class="catalog-media-link" aria-label="View ${p.name} details" style="display:block;color:inherit;text-decoration:none;width:100%;height:100%;">
+                ${mediaHtml}
+              </a>
+              ${badgeHtml}
               <button type="button" class="catalog-zoom-btn" data-slug="${p.slug}" aria-label="View ${p.name} larger">
                 <span class="icon i-zoom-plus" aria-hidden="true"></span>
               </button>
             </div>
             <div class="catalog-card-info">
-              <h3 class="catalog-card-name" data-slug="${p.slug}">${p.name}</h3>
+              <h3 class="catalog-card-name" data-slug="${p.slug}">
+                <a href="/design/${encodeURIComponent(p.slug)}" style="color:inherit;text-decoration:none;">${p.name}</a>
+              </h3>
               <div class="catalog-card-mat">${p.material}</div>
+              <div class="catalog-card-price" style="font-size:0.9rem;font-weight:600;color:var(--accent);margin:0.25rem 0;">${pPrice}</div>
               <a href="/design/${encodeURIComponent(p.slug)}" class="catalog-card-link">
                 <span>View details</span>
                 <span class="icon i-arrow-right" aria-hidden="true"></span>
@@ -911,43 +985,87 @@
     // 13. Reviews Rendering (Strictly only if verified real client review matches this slug)
     const reviewsContainer = document.getElementById("productReviewsContainer");
     if (reviewsContainer) {
-      const allReviews = window.SIGNAGE_REVIEWS || [];
-      const matchingReviews = allReviews.filter((r) => {
-        return r && (r.project === item.slug || r.design === item.slug || (r.project && r.project.toLowerCase().includes(item.name.toLowerCase())));
-      });
+      const allReviews = (window.SBData && window.SBData.reviews) ? window.SBData.reviews() : (window.SIGNAGE_REVIEWS || []);
+      const matchingReviews = allReviews.filter((r) => r && (r.designSlug === item.slug || r.project === item.slug));
 
       if (matchingReviews.length > 0) {
-        reviewsContainer.innerHTML = `
-          <section class="section-pad" style="border-top:1px solid var(--line);">
-            <div class="page-container">
-              <div style="text-align:center;max-width:700px;margin:0 auto 2.5rem;">
-                <span class="keyword-eyebrow" style="margin-bottom:0.5rem;">Verified Feedback</span>
-                <h2 style="font-size:clamp(24px,2.5vw,34px);margin:0 0 0.5rem;">Client Reviews</h2>
-              </div>
-              <div class="reviews-grid">
-                ${matchingReviews.map((r) => {
-                  const stars = Array(5).fill(0).map((_, i) =>
-                    `<span class="icon i-star" aria-hidden="true" style="${i < r.rating ? "color:var(--accent)" : "color:var(--line)"}"></span>`
-                  ).join("");
-                  return `
-                    <div class="review-card">
-                      <div class="review-stars" aria-label="${r.rating} out of 5 stars">${stars}</div>
-                      <p class="review-text">&ldquo;${r.text}&rdquo;</p>
-                      <div class="review-author">
-                        <strong>${r.name}</strong>
-                        <span>${r.project}</span>
-                      </div>
-                    </div>
-                  `;
-                }).join("")}
-              </div>
-            </div>
-          </section>
-        `;
+        reviewsContainer.innerHTML = "";
+        const section = document.createElement("section");
+        section.className = "section-pad";
+        section.style.borderTop = "1px solid var(--line)";
+        const pageContainer = document.createElement("div");
+        pageContainer.className = "page-container";
+
+        const headerDiv = document.createElement("div");
+        headerDiv.style.cssText = "text-align:center;max-width:700px;margin:0 auto 2.5rem;";
+        const eyebrow = document.createElement("span");
+        eyebrow.className = "keyword-eyebrow";
+        eyebrow.style.marginBottom = "0.5rem";
+        eyebrow.textContent = "Verified Feedback";
+        const h2 = document.createElement("h2");
+        h2.style.cssText = "font-size:clamp(24px,2.5vw,34px);margin:0 0 0.5rem;";
+        h2.textContent = "Client Reviews";
+        headerDiv.appendChild(eyebrow);
+        headerDiv.appendChild(h2);
+        pageContainer.appendChild(headerDiv);
+
+        const grid = document.createElement("div");
+        grid.className = "reviews-grid";
+        matchingReviews.forEach((r) => {
+          const card = document.createElement("div");
+          card.className = "review-card";
+
+          const starsDiv = document.createElement("div");
+          starsDiv.className = "review-stars";
+          const rating = Number(r.rating) || 5;
+          starsDiv.setAttribute("aria-label", `${rating} out of 5 stars`);
+          for (let i = 0; i < 5; i++) {
+            const star = document.createElement("span");
+            star.className = "icon i-star";
+            star.setAttribute("aria-hidden", "true");
+            star.style.color = i < rating ? "var(--accent)" : "var(--line)";
+            starsDiv.appendChild(star);
+          }
+          card.appendChild(starsDiv);
+
+          const quoteP = document.createElement("p");
+          quoteP.className = "review-text";
+          quoteP.textContent = `“${r.text || ''}”`;
+          card.appendChild(quoteP);
+
+          const authorDiv = document.createElement("div");
+          authorDiv.className = "review-author";
+          const nameEl = document.createElement("strong");
+          nameEl.textContent = r.name || '';
+          const projEl = document.createElement("span");
+          projEl.textContent = r.project || '';
+          authorDiv.appendChild(nameEl);
+          authorDiv.appendChild(projEl);
+          card.appendChild(authorDiv);
+
+          grid.appendChild(card);
+        });
+
+        pageContainer.appendChild(grid);
+        section.appendChild(pageContainer);
+        reviewsContainer.appendChild(section);
+      } else {
+        reviewsContainer.innerHTML = "";
       }
     }
 
   } catch (err) {
     console.error("Product detail initialization error:", err);
+  }
+} // end renderProductPage
+
+  if (window.SBData && window.SBData.ready) {
+    window.SBData.ready.then(renderProductPage);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", renderProductPage);
+  } else {
+    renderProductPage();
   }
 })();

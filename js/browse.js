@@ -4,7 +4,7 @@
  */
 
 function initBrowse(categoryKey) {
-  const catalog = window.CATALOG || {};
+  const catalog = (window.SBData && window.SBData.catalog) ? window.SBData.catalog() : (window.CATALOG || {});
   let catKey = categoryKey;
 
   // If no categoryKey provided, resolve from location.pathname
@@ -123,11 +123,12 @@ function initBrowse(categoryKey) {
   if (introEl) introEl.textContent = category.intro || "";
 
   // WhatsApp CTA
-  const cfg = window.SIGNAGE_CONFIG || {};
+  const cfg = (window.SBData && window.SBData.settings) ? window.SBData.settings() : (window.SIGNAGE_CONFIG || {});
   const waBtn = document.getElementById("catalogWhatsAppBtn");
-  if (waBtn && cfg.whatsappRaw) {
+  if (waBtn && (cfg.whatsappRaw || cfg.phoneRaw)) {
+    const rawNum = cfg.whatsappRaw || cfg.phoneRaw || "919999999999";
     const msg = encodeURIComponent(`Hi Signage Basket, I would like to inquire about ${category.title}.`);
-    waBtn.href = `https://wa.me/${cfg.whatsappRaw}?text=${msg}`;
+    waBtn.href = `https://wa.me/${rawNum}?text=${msg}`;
   }
 
   // Filters Bar
@@ -179,13 +180,32 @@ function initBrowse(categoryKey) {
   function renderGrid(filteredList) {
     if (!grid) return;
     grid.innerHTML = filteredList.map((item) => {
-      const plateHtml = window.renderPlate ? window.renderPlate(item.plate) : "";
+      const hasImages = Array.isArray(item.images) && item.images.length > 0;
+      let mediaInner = "";
+      if (hasImages) {
+        const firstImg = item.images[0];
+        const src = typeof firstImg === "string" ? firstImg : firstImg.url;
+        const alt = (typeof firstImg === "object" && firstImg.alt) ? firstImg.alt : `${item.name} design by Signage Basket`;
+        mediaInner = `<img src="${src}" alt="${alt.replace(/"/g, '&quot;')}" width="500" height="500" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';">`;
+      } else {
+        mediaInner = window.renderPlate ? window.renderPlate(item.plate) : "";
+      }
+
+      const badgeHtml = item.featured
+        ? `<span class="product-badge" style="position:absolute;top:10px;left:10px;z-index:2;">Popular</span>`
+        : "";
+
+      const priceText = (typeof item.price === "number" && item.price > 0)
+        ? `From ₹${item.price.toLocaleString("en-IN")}`
+        : (item.price ? `From ₹${item.price}` : "Price on request");
+
       return `
         <article class="catalog-card" data-slug="${item.slug}">
-          <div class="catalog-card-media">
-            <a href="/design/${encodeURIComponent(item.slug)}" class="catalog-media-link" aria-label="View ${item.name} details" style="display:block;color:inherit;text-decoration:none;">
-              ${plateHtml}
+          <div class="catalog-card-media" style="position:relative;">
+            <a href="/design/${encodeURIComponent(item.slug)}" class="catalog-media-link" aria-label="View ${item.name} details" style="display:block;color:inherit;text-decoration:none;width:100%;height:100%;">
+              ${mediaInner}
             </a>
+            ${badgeHtml}
             <button type="button" class="catalog-zoom-btn" data-slug="${item.slug}" aria-label="View ${item.name} larger">
               <span class="icon i-zoom-plus" aria-hidden="true"></span>
             </button>
@@ -195,6 +215,7 @@ function initBrowse(categoryKey) {
               <a href="/design/${encodeURIComponent(item.slug)}" style="color:inherit;text-decoration:none;">${item.name}</a>
             </h2>
             <div class="catalog-card-mat">${item.material}</div>
+            <div class="catalog-card-price" style="font-size:0.9rem;font-weight:600;color:var(--accent);margin:0.25rem 0;">${priceText}</div>
             <a href="/design/${encodeURIComponent(item.slug)}" class="catalog-card-link">
               <span>View details</span>
               <span class="icon i-arrow-right" aria-hidden="true"></span>
@@ -269,6 +290,15 @@ function initBrowse(categoryKey) {
 }
 
 window.initBrowse = initBrowse;
+
+if (window.SBData && window.SBData.ready) {
+  window.SBData.ready.then(() => {
+    if (document.getElementById("catalogGrid")) {
+      initBrowse();
+    }
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   if (document.getElementById("catalogGrid") && !window.browseInitialized) {
     window.browseInitialized = true;

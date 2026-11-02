@@ -7,7 +7,7 @@
 
 (function () {
   function getSearchIndex() {
-    const catalog = window.CATALOG || {};
+    const catalog = (window.SBData && window.SBData.catalog) ? window.SBData.catalog() : (window.CATALOG || {});
     const designs = [];
     const collections = [
       { type: "Collections", label: "All Collections", sub: "Browse all signage products", url: "/collection" }
@@ -90,7 +90,7 @@
     highlightedIdx = -1;
 
     if (!matched.length) {
-      const config = window.SIGNAGE_CONFIG || {};
+      const config = (window.SBData && window.SBData.settings) ? window.SBData.settings() : (window.SIGNAGE_CONFIG || {});
       const waRaw = config.whatsappRaw || "919999999999";
       const waMsg = encodeURIComponent(`Hi Signage Basket, I searched for "${query}" on your website and couldn't find it. Can you help?`);
       resultsEl.innerHTML = `

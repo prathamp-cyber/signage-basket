@@ -408,12 +408,84 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   initImageFallbackHandlers();
+  if (typeof populateInstallationsStrip === "function") populateInstallationsStrip();
+  if (typeof populateAboutWorkStrip === "function") populateAboutWorkStrip();
   if (window.checkRecentInstallations) {
     window.checkRecentInstallations();
     setTimeout(window.checkRecentInstallations, 300);
     setTimeout(window.checkRecentInstallations, 1000);
   }
 });
+
+function populateInstallationsStrip() {
+  const strip = document.getElementById("installationsStrip");
+  const section = document.querySelector(".installations-strip-section") || (strip ? strip.closest("section") : null);
+  if (!strip) return;
+
+  const apiProjects = (window.SBData && window.SBData.projects) ? window.SBData.projects() : null;
+  if (Array.isArray(apiProjects) && apiProjects.length > 0) {
+    const images = [];
+    for (const proj of apiProjects) {
+      if (Array.isArray(proj.images)) {
+        for (const img of proj.images) {
+          const src = typeof img === "string" ? img : img.url;
+          const alt = (typeof img === "object" && img.alt) ? img.alt : `${proj.title} installation by Signage Basket`;
+          images.push({ src, alt });
+          if (images.length === 8) break;
+        }
+      }
+      if (images.length === 8) break;
+    }
+
+    if (images.length < 3) {
+      if (section) section.style.display = "none";
+      return;
+    }
+
+    if (section) section.style.display = "";
+    strip.innerHTML = images.map((im) => `
+      <div class="strip-item reveal-up">
+        <img src="${im.src}" alt="${im.alt.replace(/"/g, '&quot;')}" width="280" height="280" loading="lazy" decoding="async" onerror="const it=this.closest('.strip-item');if(it){it.remove();window.checkRecentInstallations && window.checkRecentInstallations();}">
+      </div>
+    `).join("");
+  }
+
+  if (window.checkRecentInstallations) window.checkRecentInstallations();
+}
+
+function populateAboutWorkStrip() {
+  const aboutStrip = document.querySelector(".about-work-strip");
+  if (!aboutStrip) return;
+
+  const apiProjects = (window.SBData && window.SBData.projects) ? window.SBData.projects() : null;
+  if (Array.isArray(apiProjects) && apiProjects.length > 0) {
+    const images = [];
+    for (const proj of apiProjects) {
+      if (Array.isArray(proj.images)) {
+        for (const img of proj.images) {
+          const src = typeof img === "string" ? img : img.url;
+          const alt = (typeof img === "object" && img.alt) ? img.alt : `${proj.title} - ${proj.type} by Signage Basket`;
+          images.push({ src, alt });
+          if (images.length === 6) break;
+        }
+      }
+      if (images.length === 6) break;
+    }
+
+    if (images.length > 0) {
+      aboutStrip.innerHTML = images.map((im) => `
+        <img class="about-strip-img reveal-up" src="${im.src}" alt="${im.alt.replace(/"/g, '&quot;')}" loading="lazy" decoding="async" width="240" height="240" onerror="window.handleSampleImgError && window.handleSampleImgError(this, '${(im.alt || 'Sample Sign').replace(/'/g, "\\'")}');">
+      `).join("");
+    }
+  }
+}
+
+if (window.SBData && window.SBData.ready) {
+  window.SBData.ready.then(() => {
+    populateInstallationsStrip();
+    populateAboutWorkStrip();
+  });
+}
 
 // Global helpers for graceful fallback & real-work sections
 window.handleSampleImgError = function(img, name) {

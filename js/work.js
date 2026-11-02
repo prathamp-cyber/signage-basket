@@ -1,6 +1,7 @@
 /**
- * Signage Basket - Work & Portfolio Engine (Phase 4 SEO Pass)
- * Projects data with descriptive location labels, alt texts & interactive lightbox.
+ * Signage Basket - Work & Portfolio Engine
+ * Projects data from SBData.projects() or static fallback.
+ * Every project image becomes an item; caption = title, type, location.
  */
 
 window.SIGNAGE_PROJECTS = [
@@ -96,13 +97,43 @@ window.SIGNAGE_PROJECTS = [
   }
 ];
 
+function slugify(text) {
+  return String(text || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+function getWorkProjectsList() {
+  const apiProjects = (window.SBData && window.SBData.projects) ? window.SBData.projects() : null;
+  if (Array.isArray(apiProjects) && apiProjects.length > 0) {
+    const list = [];
+    apiProjects.forEach((proj, pIdx) => {
+      const images = Array.isArray(proj.images) ? proj.images : [];
+      images.forEach((img, iIdx) => {
+        const src = typeof img === "string" ? img : img.url;
+        const alt = (typeof img === "object" && img.alt) ? img.alt : `${proj.title} - ${proj.type} in ${proj.location}`;
+        list.push({
+          id: `${proj._id || pIdx}-${iIdx}`,
+          name: proj.title,
+          category: proj.type || "Custom Work",
+          categorySlug: slugify(proj.type || "custom-work"),
+          location: proj.location || "Gandhidham, Gujarat",
+          img: src,
+          alt: alt
+        });
+      });
+    });
+    if (list.length > 0) return list;
+  }
+  return window.SIGNAGE_PROJECTS || [];
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   try {
     const galleryGrid = document.getElementById("galleryGrid");
-    const filterBtns = document.querySelectorAll(".filter-btn");
+    const filterContainer = document.querySelector(".filter-pills");
     const lightboxModal = document.getElementById("lightboxModal");
     const lightboxImg = document.getElementById("lightboxImg");
     const lightboxTitle = document.getElementById("lightboxTitle");
+    const lightboxLocation = document.getElementById("lightboxLocation");
     const lightboxType = document.getElementById("lightboxType");
     const lightboxClose = document.getElementById("lightboxClose");
     const lightboxPrev = document.getElementById("lightboxPrev");
@@ -119,7 +150,7 @@ document.addEventListener("DOMContentLoaded", () => {
       let emptyMsg = galleryGrid.querySelector(".work-empty-state");
       if (cards.length === 0) {
         if (!emptyMsg) {
-          const cfg = window.SIGNAGE_CONFIG || {};
+          const cfg = (window.SBData && window.SBData.settings) ? window.SBData.settings() : (window.SIGNAGE_CONFIG || {});
           const waNum = cfg.whatsappRaw || "919999999999";
           const waMsg = encodeURIComponent(cfg.whatsappDefaultMsg || "Hi Signage Basket, I'd like to see your recent work photos.");
           const waUrl = `https://wa.me/${waNum}?text=${waMsg}`;
@@ -143,14 +174,53 @@ document.addEventListener("DOMContentLoaded", () => {
     window.handleWorkCardRemoved = checkGalleryEmpty;
 
     function getValidProjects(filter) {
-      return (window.SIGNAGE_PROJECTS || []).filter((p) => {
+      const all = getWorkProjectsList();
+      return all.filter((p) => {
         if (failedProjectIds.has(p.id)) return false;
         if (filter === "all") return true;
-        return p.categorySlug === filter || p.category.toLowerCase().includes(filter);
+        return p.categorySlug === filter || (p.category && p.category.toLowerCase().includes(filter));
       });
     }
 
-    // Render Gallery Items
+    function renderFilterPills(allProjects) {
+      if (!filterContainer) return;
+      const typesMap = new Map();
+      allProjects.forEach((p) => {
+        if (p.category && p.categorySlug) {
+          typesMap.set(p.categorySlug, p.category);
+        }
+      });
+
+      let pillsHtml = `<button class="filter-btn ${activeFilter === 'all' ? 'active' : ''}" data-filter="all">All Work</button>`;
+      typesMap.forEach((label, slug) => {
+        pillsHtml += `\n<button class="filter-btn ${activeFilter === slug ? 'active' : ''}" data-filter="${slug}">${label}</button>`;
+      });
+      filterContainer.innerHTML = pillsHtml;
+
+      filterContainer.querySelectorAll(".filter-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          filterContainer.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          activeFilter = btn.getAttribute("data-filter") || "all";
+          const filtered = getValidProjects(activeFilter);
+
+          if (typeof window.gsap !== "undefined" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            window.gsap.to(galleryGrid, {
+              opacity: 0,
+              y: 10,
+              duration: 0.25,
+              onComplete: () => {
+                renderGallery(filtered);
+                window.gsap.to(galleryGrid, { opacity: 1, y: 0, duration: 0.35 });
+              }
+            });
+          } else {
+            renderGallery(filtered);
+          }
+        });
+      });
+    }
+
     function renderGallery(projects) {
       galleryGrid.innerHTML = "";
       if (projects.length === 0) {
@@ -168,7 +238,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         card.innerHTML = `
           <div class="gallery-card-img-wrapper" style="aspect-ratio:1/1;">
-            <img src="${proj.img}" alt="${proj.alt}" class="project-img" width="500" height="500" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;" onerror="const c=this.closest('.gallery-card');if(c){c.remove();}window.onWorkImgError && window.onWorkImgError('${proj.id}');">
+            <img src="${proj.img}" alt="${proj.alt.replace(/"/g, '&quot;')}" class="project-img" width="500" height="500" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;" onerror="const c=this.closest('.gallery-card');if(c){c.remove();}window.onWorkImgError && window.onWorkImgError('${proj.id}');">
           </div>
           <div class="gallery-card-meta">
             <div>
@@ -193,42 +263,25 @@ document.addEventListener("DOMContentLoaded", () => {
       checkGalleryEmpty();
     }
 
-    window.onWorkImgError = function(id) {
+    window.onWorkImgError = function (id) {
       failedProjectIds.add(id);
       checkGalleryEmpty();
     };
 
-    // Initial Render
-    renderGallery(getValidProjects(activeFilter));
-    setTimeout(checkGalleryEmpty, 300);
-    setTimeout(checkGalleryEmpty, 1000);
+    function initWork() {
+      const all = getWorkProjectsList();
+      renderFilterPills(all);
+      renderGallery(getValidProjects(activeFilter));
+      setTimeout(checkGalleryEmpty, 300);
+      setTimeout(checkGalleryEmpty, 1000);
+    }
 
-    // Filter Logic
-    filterBtns.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        filterBtns.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
+    initWork();
+    if (window.SBData && window.SBData.ready) {
+      window.SBData.ready.then(initWork);
+    }
 
-        activeFilter = btn.getAttribute("data-filter") || "all";
-        const filtered = getValidProjects(activeFilter);
-
-        if (typeof window.gsap !== "undefined" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-          window.gsap.to(galleryGrid, {
-            opacity: 0,
-            y: 10,
-            duration: 0.25,
-            onComplete: () => {
-              renderGallery(filtered);
-              window.gsap.to(galleryGrid, { opacity: 1, y: 0, duration: 0.35 });
-            }
-          });
-        } else {
-          renderGallery(filtered);
-        }
-      });
-    });
-
-    // Lightbox Controls - ONLY navigate existing items
+    // Lightbox Controls
     function getRemainingCards() {
       return Array.from(galleryGrid.querySelectorAll(".gallery-card"));
     }
@@ -281,7 +334,8 @@ document.addEventListener("DOMContentLoaded", () => {
         lightboxImg.src = img.src;
         lightboxImg.alt = img.alt;
       }
-      if (lightboxTitle) lightboxTitle.textContent = `${title} (${loc})`;
+      if (lightboxTitle) lightboxTitle.textContent = title;
+      if (lightboxLocation) lightboxLocation.textContent = loc;
       if (lightboxType) lightboxType.textContent = cat;
     }
 

@@ -110,7 +110,7 @@
           <div class="contact-form-col">
             <form id="quoteForm" novalidate aria-label="Signage Quote Form">
               <!-- Honeypot -->
-              <input type="text" name="website_hp" style="display:none" tabindex="-1" autocomplete="off">
+              <input type="text" name="website" style="display:none !important; position:absolute !important; left:-9999px !important;" tabindex="-1" autocomplete="off">
 
               <div class="form-group" id="groupName">
                 <label class="form-label" for="fullName">Full Name *</label>
@@ -187,7 +187,7 @@
               <span class="icon i-map-pin" aria-hidden="true"></span>
               <div>
                 <strong>Studio Address</strong>
-                Station Road, Gandhidham, Kutch, Gujarat 370201
+                <span data-sb="address">Station Road, Gandhidham, Kutch, Gujarat 370201</span>
               </div>
             </div>
 
@@ -195,7 +195,7 @@
               <span class="icon i-phone" aria-hidden="true"></span>
               <div>
                 <strong>Phone &amp; WhatsApp</strong>
-                <a href="tel:+91XXXXXXXXXX" style="color:var(--ink);font-weight:500;">+91 XXXXX XXXXX</a>
+                <a href="tel:+91XXXXXXXXXX" style="color:var(--ink);font-weight:500;" data-sb="phone" data-sb-href="tel">+91 XXXXX XXXXX</a>
               </div>
             </div>
 
@@ -203,7 +203,7 @@
               <span class="icon i-mail" aria-hidden="true"></span>
               <div>
                 <strong>Email</strong>
-                <a href="mailto:hello@signagebasket.com" style="color:var(--ink);">hello@signagebasket.com</a>
+                <a href="mailto:hello@signagebasket.com" style="color:var(--ink);" data-sb="email" data-sb-href="mailto">hello@signagebasket.com</a>
               </div>
             </div>
 
@@ -211,7 +211,7 @@
               <span class="icon i-clock" aria-hidden="true"></span>
               <div>
                 <strong>Working Hours</strong>
-                Monday – Saturday: 10:00 AM – 7:00 PM
+                <span data-sb="hours">Monday – Saturday: 10:00 AM – 7:00 PM</span>
                 <p style="font-size:0.85rem;color:var(--muted);margin-top:0.15rem;">Sunday: By Appointment</p>
               </div>
             </div>
@@ -302,7 +302,7 @@
       quoteForm.addEventListener("submit", (e) => {
         e.preventDefault();
 
-        const hp = quoteForm.querySelector("input[name='website_hp']");
+        const hp = quoteForm.querySelector("input[name='website']");
         if (hp && hp.value) return;
 
         let isValid = true;
@@ -343,8 +343,8 @@
 
         if (!isValid) return;
 
-        const config = window.SIGNAGE_CONFIG || {};
-        const waNum  = config.whatsappRaw || "919999999999";
+        const cfg = (window.SBData && window.SBData.settings) ? window.SBData.settings() : (window.SIGNAGE_CONFIG || {});
+        const waNum = cfg.whatsappRaw || "919999999999";
 
         const msgLines = [
           `*New Signage Quote Request*`,
@@ -358,11 +358,32 @@
 
         const waUrl = `https://wa.me/${waNum}?text=${encodeURIComponent(msgLines.join("\n"))}`;
 
-        if (directLink) directLink.href = waUrl;
-        window.open(waUrl, "_blank");
+        const websiteHp = quoteForm.querySelector("input[name='website']")?.value || "";
 
-        quoteForm.style.display = "none";
-        if (formSuccess) formSuccess.style.display = "block";
+        const payload = {
+          source: "contact",
+          name: nameInput.value.trim(),
+          phone: phoneInput.value.trim(),
+          email: emailInput.value.trim(),
+          city: locationInput.value.trim(),
+          message: detailsInput.value.trim(),
+          details: { service: serviceInput.value },
+          website: websiteHp
+        };
+
+        const submitBtn = quoteForm.querySelector("button[type='submit']");
+        if (submitBtn) submitBtn.disabled = true;
+
+        const sendPromise = (window.SB && window.SB.sendEnquiry) ? window.SB.sendEnquiry(payload) : Promise.resolve();
+        const timeoutPromise = new Promise((r) => setTimeout(r, 1000));
+
+        Promise.race([sendPromise, timeoutPromise]).finally(() => {
+          if (directLink) directLink.href = waUrl;
+          window.open(waUrl, "_blank");
+
+          quoteForm.style.display = "none";
+          if (formSuccess) formSuccess.style.display = "block";
+        });
       });
     }
   });
@@ -373,6 +394,8 @@
   <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.29/bundled/lenis.min.js"></script>
 
   <script src="/js/config.js"></script>
+  <script src="/js/catalog.js"></script>
+  <script src="/js/data.js"></script>
   <script src="/js/products.js"></script>
   <script src="/js/search.js"></script>
   <script src="/js/layout.js"></script>

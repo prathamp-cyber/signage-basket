@@ -5,7 +5,7 @@
 
 document.addEventListener("DOMContentLoaded", () => {
   try {
-    const config = window.SIGNAGE_CONFIG || {
+    const config = (window.SBData && window.SBData.settings) ? window.SBData.settings() : (window.SIGNAGE_CONFIG || {
       phone: "+91 XXXXX XXXXX",
       whatsapp: "+91 XXXXX XXXXX",
       whatsappRaw: "919999999999",
@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
       instagramHandle: "@signagebasket",
       SITE_URL: "https://www.signagebasket.in",
       whatsappDefaultMsg: "Hi Signage Basket, I'd like a quote for a nameplate/signage in Gandhidham/Gujarat."
-    };
+    });
 
     const rawPath = window.location.pathname.replace(/\/+$/, "").replace(/\.html$/, "");
     const normalizedPath = rawPath === "" || rawPath === "/index" ? "/" : rawPath;
@@ -113,7 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <button class="header-icon-btn" id="searchToggleBtn" aria-label="Search" aria-expanded="false">
                 <span class="icon i-search" aria-hidden="true"></span>
               </button>
-              <a href="${waUrl}" target="_blank" rel="noopener" class="header-icon-btn wa-btn" aria-label="Chat on WhatsApp" title="WhatsApp Us">
+              <a href="${waUrl}" target="_blank" rel="noopener" class="header-icon-btn wa-btn" aria-label="Chat on WhatsApp" title="WhatsApp Us" data-sb-href="whatsapp">
                 <span class="icon i-whatsapp" aria-hidden="true"></span>
               </a>
               <a href="/contact" class="btn btn-outline header-quote-btn" title="Get a Quote">
@@ -169,10 +169,10 @@ document.addEventListener("DOMContentLoaded", () => {
             <a href="/contact" class="mobile-nav-link ${isContact ? 'active' : ''}">Contact</a>
           </nav>
           <div class="mobile-nav-footer">
-            <p><strong>Phone:</strong> <a href="tel:${config.phone}">${config.phone}</a></p>
-            <p><strong>WhatsApp:</strong> <a href="https://wa.me/${config.whatsappRaw}">${config.whatsapp}</a></p>
-            <p><strong>Email:</strong> <a href="mailto:${config.email}">${config.email}</a></p>
-            <p><strong>Location:</strong> ${config.address}</p>
+            <p><strong>Phone:</strong> <a href="tel:${config.phone}" data-sb="phone" data-sb-href="tel">${config.phone}</a></p>
+            <p><strong>WhatsApp:</strong> <a href="https://wa.me/${config.whatsappRaw}" data-sb="whatsapp" data-sb-href="whatsapp">${config.whatsapp}</a></p>
+            <p><strong>Email:</strong> <a href="mailto:${config.email}" data-sb="email" data-sb-href="mailto">${config.email}</a></p>
+            <p><strong>Location:</strong> <span data-sb="address">${config.address}</span></p>
           </div>
         </div>
       `;
@@ -188,10 +188,10 @@ document.addEventListener("DOMContentLoaded", () => {
     // 3. Inject Shared Footer
     if (!document.querySelector(".site-footer")) {
       const socials = [
-        config.instagram ? `<a href="${config.instagram}" target="_blank" rel="noopener" class="footer-social-icon" aria-label="Instagram"><span class="icon i-instagram"></span></a>` : "",
-        config.facebook  ? `<a href="${config.facebook}"  target="_blank" rel="noopener" class="footer-social-icon" aria-label="Facebook"><span class="icon i-facebook"></span></a>`   : "",
-        config.youtube   ? `<a href="${config.youtube}"   target="_blank" rel="noopener" class="footer-social-icon" aria-label="YouTube"><span class="icon i-youtube"></span></a>`     : "",
-        config.whatsappRaw ? `<a href="https://wa.me/${config.whatsappRaw}" target="_blank" rel="noopener" class="footer-social-icon" aria-label="WhatsApp"><span class="icon i-whatsapp"></span></a>` : "",
+        `<a href="${config.instagram || ''}" target="_blank" rel="noopener" class="footer-social-icon" aria-label="Instagram" data-sb-href="instagram" ${config.instagram ? '' : 'style="display:none;"'}><span class="icon i-instagram"></span></a>`,
+        `<a href="${config.facebook || ''}" target="_blank" rel="noopener" class="footer-social-icon" aria-label="Facebook" data-sb-href="facebook" ${config.facebook ? '' : 'style="display:none;"'}><span class="icon i-facebook"></span></a>`,
+        `<a href="${config.youtube || ''}" target="_blank" rel="noopener" class="footer-social-icon" aria-label="YouTube" data-sb-href="youtube" ${config.youtube ? '' : 'style="display:none;"'}><span class="icon i-youtube"></span></a>`,
+        config.whatsappRaw ? `<a href="https://wa.me/${config.whatsappRaw}" target="_blank" rel="noopener" class="footer-social-icon" aria-label="WhatsApp" data-sb-href="whatsapp"><span class="icon i-whatsapp"></span></a>` : ""
       ].filter(Boolean).join("");
 
       const footerHtml = `
@@ -238,19 +238,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="footer-contact-info">
                   <div class="footer-contact-row">
                     <span class="icon i-map-pin"></span>
-                    <span>${config.address}</span>
+                    <span data-sb="address">${config.address}</span>
                   </div>
                   <div class="footer-contact-row">
                     <span class="icon i-phone"></span>
-                    <a href="tel:${config.phone}">${config.phone}</a>
+                    <a href="tel:${config.phone}" data-sb="phone" data-sb-href="tel">${config.phone}</a>
                   </div>
                   <div class="footer-contact-row">
                     <span class="icon i-mail"></span>
-                    <a href="mailto:${config.email}">${config.email}</a>
+                    <a href="mailto:${config.email}" data-sb="email" data-sb-href="mailto">${config.email}</a>
                   </div>
                   <div class="footer-contact-row">
                     <span class="icon i-clock"></span>
-                    <span>Mon – Sat: 10:00 AM – 7:00 PM</span>
+                    <span data-sb="hours">Mon – Sat: 10:00 AM – 7:00 PM</span>
                   </div>
                 </div>
               </div>
@@ -306,10 +306,15 @@ document.addEventListener("DOMContentLoaded", () => {
       waBtn.target = "_blank";
       waBtn.rel = "noopener";
       waBtn.className = "floating-whatsapp";
+      waBtn.setAttribute("data-sb-href", "whatsapp");
       waBtn.setAttribute("aria-label", "Contact Signage Basket on WhatsApp");
       waBtn.title = "WhatsApp Us";
       waBtn.innerHTML = `<span class="icon i-whatsapp" style="font-size:1.5rem;"></span>`;
       document.body.appendChild(waBtn);
+    }
+
+    if (window.SB && window.SB.applySettings) {
+      window.SB.applySettings();
     }
 
     // 5. Mobile Toggle & Drawer

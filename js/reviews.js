@@ -1,32 +1,19 @@
 /**
  * Signage Basket — Client Reviews / Testimonials
- *
- * HOW TO ADD REAL REVIEWS:
- * Add objects to the REVIEWS array below. Each object must have:
- *   name    {string}  — client's first name or initials
- *   text    {string}  — the review quote (their words, not yours)
- *   project {string}  — short description, e.g. "Home nameplate, Adipur"
- *   rating  {number}  — 1–5 stars
- *
- * When the array is EMPTY the entire "What our clients say" section
- * is not rendered on the page. Only add genuine reviews here.
- *
- * Example (remove the block comment to activate):
- *
- * { name: "Ramesh P.", text: "Very happy with the nameplate. The 3D preview was exactly what we got.", project: "Villa nameplate, Gandhidham", rating: 5 },
+ * Renders from SBData.reviews() with textContent escaping and empty hiding.
  */
-
-window.SIGNAGE_REVIEWS = [
-  // Add real client reviews here
-];
+window.SIGNAGE_REVIEWS = window.SIGNAGE_REVIEWS || [];
 
 (function () {
   function renderReviews() {
     const section = document.getElementById("reviewsSection");
     if (!section) return;
 
-    const reviews = window.SIGNAGE_REVIEWS || [];
-    if (!reviews.length) {
+    const allReviews = (window.SBData && window.SBData.reviews)
+      ? window.SBData.reviews()
+      : (window.SIGNAGE_REVIEWS || []);
+
+    if (!Array.isArray(allReviews) || allReviews.length === 0) {
       section.style.display = "none";
       return;
     }
@@ -36,21 +23,47 @@ window.SIGNAGE_REVIEWS = [
     const grid = section.querySelector(".reviews-grid");
     if (!grid) return;
 
-    grid.innerHTML = reviews.map((r) => {
-      const stars = Array(5).fill(0).map((_, i) =>
-        `<span class="icon i-star" aria-hidden="true" style="${i < r.rating ? "color:var(--accent)" : "color:var(--line)"}"></span>`
-      ).join("");
+    grid.innerHTML = "";
+    allReviews.forEach((r) => {
+      const card = document.createElement("div");
+      card.className = "review-card";
 
-      return `
-        <div class="review-card">
-          <div class="review-stars" aria-label="${r.rating} out of 5 stars">${stars}</div>
-          <p class="review-text">&ldquo;${r.text}&rdquo;</p>
-          <div class="review-author">
-            <strong>${r.name}</strong>
-            <span>${r.project}</span>
-          </div>
-        </div>`;
-    }).join("");
+      const rating = Number(r.rating) || 5;
+      const starsDiv = document.createElement("div");
+      starsDiv.className = "review-stars";
+      starsDiv.setAttribute("aria-label", `${rating} out of 5 stars`);
+      for (let i = 0; i < 5; i++) {
+        const star = document.createElement("span");
+        star.className = "icon i-star";
+        star.setAttribute("aria-hidden", "true");
+        star.style.color = i < rating ? "var(--accent)" : "var(--line)";
+        starsDiv.appendChild(star);
+      }
+      card.appendChild(starsDiv);
+
+      const quoteP = document.createElement("p");
+      quoteP.className = "review-text";
+      quoteP.textContent = `“${r.text || ''}”`;
+      card.appendChild(quoteP);
+
+      const authorDiv = document.createElement("div");
+      authorDiv.className = "review-author";
+      const nameEl = document.createElement("strong");
+      nameEl.textContent = r.name || '';
+      const projEl = document.createElement("span");
+      projEl.textContent = r.project || '';
+      authorDiv.appendChild(nameEl);
+      authorDiv.appendChild(projEl);
+      card.appendChild(authorDiv);
+
+      grid.appendChild(card);
+    });
+  }
+
+  window.renderReviews = renderReviews;
+
+  if (window.SBData && window.SBData.ready) {
+    window.SBData.ready.then(renderReviews);
   }
 
   if (document.readyState === "loading") {

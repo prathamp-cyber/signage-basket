@@ -53,7 +53,7 @@
       plate.setAttribute("data-shape",    activeShape);
 
       if (whatsappBtn) {
-        const config = window.SIGNAGE_CONFIG || {};
+        const config = (window.SBData && window.SBData.settings) ? window.SBData.settings() : (window.SIGNAGE_CONFIG || {});
         const rawPhone = config.whatsappRaw || "919999999999";
 
         const materialLabel = activeMaterial === "brushed-steel" ? "Brushed Steel" :
@@ -73,6 +73,79 @@
 
         whatsappBtn.href = `https://wa.me/${rawPhone}?text=${encodeURIComponent(msg)}`;
       }
+    }
+
+    // Attach click handler on preview request button to send enquiry before opening WhatsApp
+    if (whatsappBtn && !whatsappBtn.dataset.sbBound) {
+      whatsappBtn.dataset.sbBound = "true";
+
+      // Ensure hidden honeypot field exists in preview container
+      let hp = document.getElementById("previewHoneypot");
+      if (!hp) {
+        hp = document.createElement("input");
+        hp.type = "text";
+        hp.id = "previewHoneypot";
+        hp.name = "website";
+        hp.tabIndex = -1;
+        hp.autocomplete = "off";
+        hp.style.cssText = "display:none !important; position:absolute !important; left:-9999px !important;";
+        whatsappBtn.parentNode.insertBefore(hp, whatsappBtn);
+      }
+
+      whatsappBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const hpVal = hp ? hp.value : "";
+        if (hpVal) return;
+
+        const surnameVal = (surnameInput.value || "Sharma").trim();
+        const namesVal   = (namesInput.value  || "Rajesh & Meena").trim();
+        const activeMaterial = document.querySelector('input[name="previewMaterial"]:checked')?.value || "antique-brass";
+        const activeStyle    = document.querySelector('input[name="previewStyle"]:checked')?.value    || "classic";
+        const activeShape    = document.querySelector('input[name="previewShape"]:checked')?.value    || "rectangle";
+
+        const cfg = (window.SBData && window.SBData.settings) ? window.SBData.settings() : (window.SIGNAGE_CONFIG || {});
+        const rawPhone = cfg.whatsappRaw || "919999999999";
+
+        const materialLabel = activeMaterial === "brushed-steel" ? "Brushed Steel" :
+                              activeMaterial === "matte-black"   ? "Matte Black"   : "Antique Brass";
+        const styleLabel    = activeStyle === "modern" ? "Modern (Josefin Sans)" :
+                              activeStyle === "script" ? "Script (Great Vibes)"  : "Classic (Cormorant Garamond)";
+        const shapeLabel    = activeShape === "oval"   ? "Oval"                  :
+                              activeShape === "round"  ? "Round"                 : "Rectangle";
+
+        const msg = `Hi Signage Basket, I designed a nameplate using your Live Preview:\n` +
+                    `• Surname: ${surnameVal}\n` +
+                    `• Names: ${namesVal}\n` +
+                    `• Material: ${materialLabel}\n` +
+                    `• Style: ${styleLabel}\n` +
+                    `• Shape: ${shapeLabel}\n\n` +
+                    `Could you please share a free 3D design preview and price quote?`;
+
+        const waUrl = `https://wa.me/${rawPhone}?text=${encodeURIComponent(msg)}`;
+
+        const payload = {
+          source: "preview",
+          name: namesVal || surnameVal || "Live Preview Client",
+          phone: "",
+          email: "",
+          city: "",
+          message: msg,
+          details: {
+            surname: surnameVal,
+            names: namesVal,
+            material: activeMaterial,
+            style: activeStyle,
+            shape: activeShape
+          },
+          website: hpVal
+        };
+
+        const sendPromise = (window.SB && window.SB.sendEnquiry) ? window.SB.sendEnquiry(payload) : Promise.resolve();
+        const timeoutPromise = new Promise((r) => setTimeout(r, 1000));
+
+        await Promise.race([sendPromise, timeoutPromise]);
+        window.open(waUrl, "_blank");
+      });
     }
 
     surnameInput.addEventListener("input", updatePreview);
