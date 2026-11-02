@@ -13,7 +13,9 @@ export async function renderSettings(root) {
     toast(`Failed to load settings: ${err.message}`, 'error');
   }
 
-  const container = h('div', { style: 'max-width:760px; display:flex; flex-direction:column; gap:24px;' });
+  const container = h('div', { style: 'max-width:760px; display:flex; flex-direction:column; gap:24px;' },
+    h('p', { class: 'form-hint', style: 'margin-bottom:0;', text: 'Changes appear on the website within about a minute.' })
+  );
 
   // ------------------------------------------
   // 1. Business Contact Details Card
@@ -107,6 +109,24 @@ export async function renderSettings(root) {
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         emailErr.textContent = 'Please enter a valid email address';
         emailErr.style.display = 'block';
+        return;
+      }
+
+      const insta = instaInp.value.trim();
+      if (insta && !/^https?:\/\//i.test(insta)) {
+        toast('Instagram link must be a valid URL starting with https://', 'error');
+        return;
+      }
+
+      const fb = fbInp.value.trim();
+      if (fb && !/^https?:\/\//i.test(fb)) {
+        toast('Facebook link must be a valid URL starting with https://', 'error');
+        return;
+      }
+
+      const yt = ytInp.value.trim();
+      if (yt && !/^https?:\/\//i.test(yt)) {
+        toast('YouTube link must be a valid URL starting with https://', 'error');
         return;
       }
 
@@ -220,6 +240,8 @@ export async function renderSettings(root) {
 
   const passErr = h('div', { class: 'form-error', style: 'display:none; margin-bottom:10px;' });
 
+  const passBtn = h('button', { type: 'submit', class: 'btn btn-outline btn-sm' }, 'Change password');
+
   const passForm = h('form', {
     onsubmit: async (e) => {
       e.preventDefault();
@@ -240,6 +262,9 @@ export async function renderSettings(root) {
         return;
       }
 
+      passBtn.disabled = true;
+      passBtn.textContent = 'Updating...';
+
       try {
         await api('/api/auth/change-password', {
           method: 'POST',
@@ -254,6 +279,9 @@ export async function renderSettings(root) {
       } catch (err) {
         passErr.textContent = err.message;
         passErr.style.display = 'block';
+      } finally {
+        passBtn.disabled = false;
+        passBtn.textContent = 'Change password';
       }
     }
   },
@@ -272,7 +300,7 @@ export async function renderSettings(root) {
       confirmPassInp
     ),
     passErr,
-    h('button', { type: 'submit', class: 'btn btn-outline btn-sm' }, 'Change password')
+    passBtn
   );
 
   const passCard = h('div', { class: 'card' },

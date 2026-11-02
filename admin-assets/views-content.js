@@ -16,7 +16,8 @@ import {
   slugify,
   go,
   state,
-  navGuard
+  navGuard,
+  refreshStats
 } from './core.js';
 
 const CATEGORIES = [
@@ -655,7 +656,7 @@ export async function renderDesignForm(root, id = null) {
 // ==========================================
 // 3. PROJECTS GALLERY
 // ==========================================
-export async function renderProjects(root) {
+export async function renderProjects(root, mode = null) {
   root.innerHTML = '';
   root.appendChild(h('div', { class: 'skeleton', style: 'height:300px; width:100%;' }));
 
@@ -695,7 +696,8 @@ export async function renderProjects(root) {
     },
       h('div', {},
         h('h2', { style: 'font-size:18px; font-weight:600;', text: `Installation Projects (${projects.length})` }),
-        h('p', { class: 'form-hint', text: 'These photos appear in Our Work and Recent Installations on the website.' })
+        h('p', { class: 'form-hint', text: 'These photos appear in Our Work and Recent Installations on the website.' }),
+        h('p', { class: 'form-hint', text: 'Changes appear on the website within about a minute.', style: 'color:var(--bronze); font-size:12px; margin-top:2px;' })
       ),
       h('div', { style: 'display:flex; gap:10px;' }, saveOrderBtn, addBtn)
     );
@@ -796,6 +798,9 @@ export async function renderProjects(root) {
     }
 
     root.append(toolbar, grid);
+    if (mode === 'new') {
+      openProjectDrawer(null, () => renderProjects(root));
+    }
   } catch (err) {
     root.innerHTML = '';
     root.appendChild(h('div', { class: 'card' }, h('p', { class: 'form-error', text: err.message })));
@@ -919,7 +924,7 @@ function openProjectDrawer(proj, onReload) {
 // ==========================================
 // 4. REVIEWS MANAGEMENT
 // ==========================================
-export async function renderReviews(root) {
+export async function renderReviews(root, mode = null) {
   root.innerHTML = '';
   root.appendChild(h('div', { class: 'skeleton', style: 'height:300px; width:100%;' }));
 
@@ -1299,9 +1304,31 @@ export async function renderMedia(root) {
           class: 'btn btn-outline btn-sm',
           style: 'color:var(--danger); margin-left:auto;',
           onclick: async () => {
+            let inUseMsg = '';
+            try {
+              const [designsRes, projectsRes] = await Promise.all([
+                api('/api/admin/designs').catch(() => ({ items: [] })),
+                api('/api/admin/projects').catch(() => ({ items: [] }))
+              ]);
+              const usedIn = [];
+              (designsRes.items || []).forEach(d => {
+                if ((d.images || []).some(img => (typeof img === 'string' ? img : img.url) === b.url)) {
+                  usedIn.push(`Design: "${d.name}"`);
+                }
+              });
+              (projectsRes.items || []).forEach(p => {
+                if ((p.images || []).some(img => (typeof img === 'string' ? img : img.url) === b.url)) {
+                  usedIn.push(`Project: "${p.title}"`);
+                }
+              });
+              if (usedIn.length > 0) {
+                inUseMsg = `\n\n⚠️ Warning: This photo is currently in use by:\n${usedIn.join('\n')}`;
+              }
+            } catch (_) {}
+
             const ok = await confirmDialog({
               title: 'Delete Photo',
-              message: 'Permanently remove this photo from Blob storage?',
+              message: `Permanently remove this photo from Blob storage?${inUseMsg}`,
               confirmText: 'Delete',
               danger: true
             });

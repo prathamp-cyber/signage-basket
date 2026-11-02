@@ -147,6 +147,26 @@ export async function api(path, { method = 'GET', body = null } = {}) {
   return data;
 }
 
+// Background Stats & Badge Refresher
+export async function refreshStats() {
+  try {
+    const statsRes = await api('/api/admin/stats');
+    state.stats = statsRes.stats;
+    const badge = document.getElementById('enquiriesNavBadge');
+    if (badge) {
+      if (statsRes.stats?.newEnquiries > 0) {
+        badge.textContent = statsRes.stats.newEnquiries;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+    return statsRes.stats;
+  } catch (_) {
+    return null;
+  }
+}
+
 // Bottom Center Toast
 export function toast(message, type = 'info') {
   let shelf = document.getElementById('toastShelf');
@@ -985,17 +1005,8 @@ export async function route() {
   const skeletonEl = h('div', { class: 'skeleton', style: 'height:320px; width:100%;' });
   content.appendChild(skeletonEl);
 
-  // Update badge in background
-  api('/api/admin/stats').then(statsRes => {
-    state.stats = statsRes.stats;
-    const badge = document.getElementById('enquiriesNavBadge');
-    if (badge && statsRes.stats?.newEnquiries > 0) {
-      badge.textContent = statsRes.stats.newEnquiries;
-      badge.style.display = 'inline-block';
-    } else if (badge) {
-      badge.style.display = 'none';
-    }
-  }).catch(() => {});
+  // Update badge & stats in background
+  refreshStats();
 
   try {
     let mod;
@@ -1023,9 +1034,15 @@ export async function route() {
     } else if (section === 'projects') {
       mod = await import('./views-content.js');
       fnName = 'renderProjects';
+      if (param === 'new') {
+        fnArg = 'new';
+      }
     } else if (section === 'reviews') {
       mod = await import('./views-content.js');
       fnName = 'renderReviews';
+      if (param === 'new') {
+        fnArg = 'new';
+      }
     } else if (section === 'media') {
       mod = await import('./views-content.js');
       fnName = 'renderMedia';

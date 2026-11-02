@@ -573,15 +573,18 @@ module.exports = async function handler(req, res) {
             sizes: Array.isArray(body.sizes) ? body.sizes.map(s => String(s).trim()).filter(Boolean) : [],
             price: body.price !== null && body.price !== '' && !isNaN(Number(body.price)) ? Number(body.price) : null,
             images: Array.isArray(body.images) ? body.images.map(img => ({
-              url: String(img.url || ''),
+              url: String(img.url || img || ''),
               alt: String(img.alt || '').slice(0, 150)
             })) : [],
-            plate: body.plate && typeof body.plate === 'object' ? body.plate : null,
             status: body.status === 'published' ? 'published' : 'draft',
             featured: Boolean(body.featured),
             order: Number.isInteger(Number(body.order)) ? Number(body.order) : 0,
             updatedAt: new Date()
           };
+
+          if (body.plate !== undefined) {
+            updateFields.plate = body.plate && typeof body.plate === 'object' ? body.plate : null;
+          }
 
           const result = await db.collection('designs').updateOne(
             toIdQuery(designId),

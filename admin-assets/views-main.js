@@ -11,7 +11,8 @@ import {
   relTime,
   fmtDate,
   go,
-  state
+  state,
+  refreshStats
 } from './core.js';
 
 // ==========================================
@@ -155,7 +156,7 @@ export async function renderDashboard(root) {
         recentEnquiries.length === 0
           ? h('tr', {}, h('td', { colspan: '5', class: 'form-hint', style: 'text-align:center; padding:24px;', text: 'No enquiries received yet.' }))
           : recentEnquiries.map(enq =>
-              h('tr', { class: `row-click ${enq.status === 'new' ? 'row-new' : ''}`, onclick: () => go('enquiries') },
+              h('tr', { class: `row-click ${enq.status === 'new' ? 'row-new' : ''}`, onclick: () => openEnquiryDetail(enq, () => renderDashboard(root)) },
                 h('td', {},
                   enq.status === 'new' ? h('span', { class: 'dot-bronze' }) : null,
                   enq.name
@@ -226,6 +227,7 @@ export async function importStarterCatalog() {
       body: { items }
     });
     toast(`Imported ${res.imported} new designs (${res.skipped} skipped)`, 'success');
+    await refreshStats();
   } catch (err) {
     toast(`Import failed: ${err.message}`, 'error');
   }
@@ -475,6 +477,7 @@ function openEnquiryDetail(enq, onReload) {
       body: { seen: true }
     }).catch(() => {});
     enq.seen = true;
+    refreshStats();
   }
 
   const drawerContent = h('div', { style: 'display:flex; flex-direction:column; gap:20px;' });
@@ -572,8 +575,9 @@ function openEnquiryDetail(enq, onReload) {
   const waDesign = enq.design?.name || 'signage';
   const waMsg = encodeURIComponent(`Hello ${enq.name}, thank you for contacting Signage Basket regarding ${waDesign}. How can we assist you with the design and sizing today?`);
 
+  const cleanDigits = String(enq.phone || '').replace(/\D/g, '').slice(-10);
   const waBtn = h('a', {
-    href: `https://wa.me/91${enq.phone}?text=${waMsg}`,
+    href: `https://wa.me/91${cleanDigits}?text=${waMsg}`,
     target: '_blank',
     rel: 'noopener',
     class: 'btn btn-ink',
@@ -653,6 +657,33 @@ function exportFilteredCsv(items) {
     toast('No enquiries to export', 'error');
     return;
   }
+
+  const headers = ['Date', 'Name', 'Phone', 'Email', 'City', 'Status', 'Design', 'Source', 'Message', 'Notes'];
+  const rows = items.map(it => [
+    new Date(it.createdAt).toISOString(),
+    `"${(it.name || '').replace(/"/g, '""')}"`,
+    `"${(it.phone || '').replace(/"/g, '""')}"`,
+    `"${(it.email || '').replace(/"/g, '""')}"`,
+    `"${(it.city || '').replace(/"/g, '""')}"`,
+    `"${(it.status || '').replace(/"/g, '""')}"`,
+    `"${(it.design?.name || '').replace(/"/g, '""')}"`,
+    `"${(it.source || '').replace(/"/g, '""')}"`,
+    `"${(it.message || '').replace(/"/g, '""')}"`,
+    `"${(it.notes || '').replace(/"/g, '""')}"`
+  ]);
+
+  const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `signage-basket-enquiries-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  toast('CSV exported successfully', 'success');
+}
 
   const headers = ['Date', 'Name', 'Phone', 'Email', 'City', 'Status', 'Design', 'Source', 'Message', 'Notes'];
   const rows = items.map(it => [
