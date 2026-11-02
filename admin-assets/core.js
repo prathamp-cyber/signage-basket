@@ -1,15 +1,6 @@
 /**
  * Signage Basket — Admin Core & SPA Engine
  */
-import { renderDashboard, renderEnquiries } from './views-main.js';
-import { renderSettings } from './views-settings.js';
-import {
-  renderDesigns,
-  renderDesignForm,
-  renderProjects,
-  renderReviews,
-  renderMedia
-} from './views-content.js';
 
 // Global shared state
 export const state = {
@@ -25,12 +16,11 @@ export function navGuard(fn) {
 
 // Router navigation helper
 export function go(hash) {
-  if (currentNavGuard && typeof currentNavGuard === 'function') {
-    const allowed = currentNavGuard();
-    if (!allowed) return;
-    currentNavGuard = null;
+  const targetHash = hash.startsWith('#') ? hash : `#/${hash.replace(/^\/+/, '')}`;
+  if (window.location.hash !== targetHash) {
+    window.location.hash = targetHash;
   }
-  window.location.hash = hash.startsWith('#') ? hash : `#/${hash}`;
+  route();
 }
 
 // HTML Escape helper
@@ -753,7 +743,7 @@ function showLoginScreen() {
       toast('Signed in successfully', 'success');
       mountAppShell();
       window.location.hash = '#/dashboard';
-      navigate();
+      route();
     } catch (err) {
       console.error('Unexpected login exception:', err);
       errorEl.textContent = 'Server error. Check the Vercel environment variables (MONGODB_URI, ADMIN_USERNAME, ADMIN_PASSWORD_HASH, ADMIN_JWT_SECRET) and the Vercel logs.';
@@ -906,27 +896,56 @@ function createNavLink(route, label, iconName, withBadge = false, customSvg = nu
 // ------------------------------------------
 // SPA Router
 // ------------------------------------------
-async function navigate() {
-  if (currentNavGuard && typeof currentNavGuard === 'function') {
-    const allowed = currentNavGuard();
-    if (!allowed) return;
-    currentNavGuard = null;
+let isHashListenerBound = false;
+let currentRenderToken = 0;
+let lastValidHash = window.location.hash || '#/dashboard';
+
+function bindHashListener() {
+  if (!isHashListenerBound) {
+    window.addEventListener('hashchange', () => {
+      route();
+    });
+    isHashListenerBound = true;
+  }
+}
+
+export async function route() {
+  bindHashListener();
+
+  let currentHash = window.location.hash;
+  if (!currentHash || currentHash === '#' || currentHash === '#/') {
+    currentHash = '#/dashboard';
+    if (window.location.hash !== '#/dashboard') {
+      window.location.hash = '#/dashboard';
+      return;
+    }
   }
 
-  const raw = window.location.hash.replace(/^#\/?/, '') || 'dashboard';
-  const parts = raw.split('/');
-  const route = parts[0];
-  const param = parts[1] || null;
+  // 1) Respect navGuard: if it blocks, restore previous hash and stop
+  if (currentNavGuard && typeof currentNavGuard === 'function') {
+    const allowed = currentNavGuard();
+    if (!allowed) {
+      if (window.location.hash !== lastValidHash) {
+        window.location.hash = lastValidHash;
+      }
+      return;
+    }
+    currentNavGuard = null;
+  }
+  lastValidHash = currentHash;
 
   const content = document.getElementById('adminContent');
   const pageTitle = document.getElementById('pageTitle');
   if (!content) return;
 
-  // Active state in sidebar
-  document.querySelectorAll('.sidebar-nav .nav-link').forEach(link => {
-    link.classList.toggle('active', link.dataset.route === route);
-  });
+  const thisToken = ++currentRenderToken;
 
+  const raw = currentHash.replace(/^#\/?/, '') || 'dashboard';
+  const parts = raw.split('/');
+  const section = parts[0] || 'dashboard';
+  const param = parts.length > 1 ? parts.slice(1).join('/') : null;
+
+  // Set top-bar page title
   const titles = {
     dashboard: 'Dashboard',
     enquiries: 'Customer Enquiries',
@@ -936,16 +955,38 @@ async function navigate() {
     media: 'Media Storage',
     settings: 'Site Settings'
   };
-  if (pageTitle) pageTitle.textContent = titles[route] || 'Admin';
+  if (pageTitle) {
+    if (section === 'designs' && param === 'new') {
+      pageTitle.textContent = 'Add Design';
+    } else if (section === 'designs' && param) {
+      pageTitle.textContent = 'Edit Design';
+    } else {
+      pageTitle.textContent = titles[section] || 'Dashboard';
+    }
+  }
 
-  // Skeleton shimmer
+  // Mark matching sidebar item active (use data-route attributes)
+  document.querySelectorAll('.sidebar-nav .nav-link').forEach(link => {
+    link.classList.toggle('active', link.dataset.route === section);
+  });
+
+  // Close mobile drawer
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebarBackdrop');
+  if (sidebar) sidebar.classList.remove('open');
+  if (backdrop) backdrop.classList.remove('open');
+
+  // Scroll to top
+  window.scrollTo(0, 0);
+  content.scrollTop = 0;
+
+  // Show skeleton loader
   content.innerHTML = '';
   const skeletonEl = h('div', { class: 'skeleton', style: 'height:320px; width:100%;' });
   content.appendChild(skeletonEl);
 
   // Update badge in background
-  try {
-    const statsRes = await api('/api/admin/stats');
+  api('/api/admin/stats').then(statsRes => {
     state.stats = statsRes.stats;
     const badge = document.getElementById('enquiriesNavBadge');
     if (badge && statsRes.stats?.newEnquiries > 0) {
@@ -954,53 +995,87 @@ async function navigate() {
     } else if (badge) {
       badge.style.display = 'none';
     }
-  } catch (_) {}
+  }).catch(() => {});
 
   try {
+    let mod;
+    let fnName;
+    let fnArg = undefined;
+
+    // Load view with DYNAMIC import to avoid circular-import problems
+    if (section === 'dashboard') {
+      mod = await import('./views-main.js');
+      fnName = 'renderDashboard';
+    } else if (section === 'enquiries') {
+      mod = await import('./views-main.js');
+      fnName = 'renderEnquiries';
+    } else if (section === 'designs') {
+      mod = await import('./views-content.js');
+      if (param === 'new') {
+        fnName = 'renderDesignForm';
+        fnArg = null;
+      } else if (param) {
+        fnName = 'renderDesignForm';
+        fnArg = param;
+      } else {
+        fnName = 'renderDesigns';
+      }
+    } else if (section === 'projects') {
+      mod = await import('./views-content.js');
+      fnName = 'renderProjects';
+    } else if (section === 'reviews') {
+      mod = await import('./views-content.js');
+      fnName = 'renderReviews';
+    } else if (section === 'media') {
+      mod = await import('./views-content.js');
+      fnName = 'renderMedia';
+    } else if (section === 'settings') {
+      mod = await import('./views-settings.js');
+      fnName = 'renderSettings';
+    } else {
+      // Anything else -> dashboard
+      window.location.hash = '#/dashboard';
+      mod = await import('./views-main.js');
+      fnName = 'renderDashboard';
+    }
+
+    // Stale render token guard
+    if (thisToken !== currentRenderToken) return;
+
+    // If expected export does not exist, render warning card
+    if (!mod || typeof mod[fnName] !== 'function') {
+      content.innerHTML = '';
+      const notAvailCard = h('div', { class: 'card', style: 'text-align:center; padding:40px 20px;' },
+        h('h3', { text: 'This section is not available' }),
+        h('p', { class: 'form-hint', text: `Missing export function: ${fnName}`, style: 'margin:8px 0 16px;' }),
+        h('button', {
+          class: 'btn btn-ink btn-sm',
+          onclick: () => go('dashboard')
+        }, 'Back to Dashboard')
+      );
+      content.appendChild(notAvailCard);
+      return;
+    }
+
     content.innerHTML = '';
-    switch (route) {
-      case 'dashboard':
-        await renderDashboard(content);
-        break;
-      case 'enquiries':
-        await renderEnquiries(content);
-        break;
-      case 'designs':
-        if (param === 'new') {
-          await renderDesignForm(content, null);
-        } else if (param) {
-          await renderDesignForm(content, param);
-        } else {
-          await renderDesigns(content);
-        }
-        break;
-      case 'projects':
-        await renderProjects(content);
-        break;
-      case 'reviews':
-        await renderReviews(content);
-        break;
-      case 'media':
-        await renderMedia(content);
-        break;
-      case 'settings':
-        await renderSettings(content);
-        break;
-      default:
-        go('dashboard');
-        break;
+    if (fnArg !== undefined) {
+      await mod[fnName](content, fnArg);
+    } else {
+      await mod[fnName](content);
     }
   } catch (err) {
+    if (thisToken !== currentRenderToken) return;
+    console.error('Route error loading section:', err);
     content.innerHTML = '';
-    const errBox = h('div', { class: 'card', style: 'text-align:center; padding:40px 20px;' },
-      h('h3', { text: 'Failed to load this section' }),
-      h('p', { class: 'form-hint', text: err.message, style: 'margin:8px 0 16px;' }),
+    const errCard = h('div', { class: 'card', style: 'text-align:center; padding:40px 20px;' },
+      h('h3', { text: 'Could not load this section' }),
+      h('p', { class: 'form-hint', text: err && err.message ? err.message : String(err), style: 'margin:8px 0 16px;' }),
       h('button', {
         class: 'btn btn-ink btn-sm',
-        onclick: () => navigate()
+        onclick: () => route()
       }, 'Retry')
     );
-    content.appendChild(errBox);
+    content.appendChild(errCard);
   }
 }
 
@@ -1015,8 +1090,7 @@ async function init() {
     const res = await api('/api/auth/me');
     state.user = res.user;
     mountAppShell();
-    window.addEventListener('hashchange', navigate);
-    navigate();
+    route();
   } catch (_) {
     showLoginScreen();
   }
