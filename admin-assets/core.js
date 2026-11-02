@@ -624,7 +624,7 @@ function showLoginScreen() {
 
   const statusLine = h('div', {
     class: 'login-status-line',
-    style: 'margin-top:18px; font-size:12px; text-align:center; color:#777;'
+    style: 'margin-top:18px; font-size:12px; text-align:center; color:#777; line-height:1.5;'
   }, 'Checking server status...');
 
   // Call GET /api/health once on load
@@ -636,17 +636,32 @@ function showLoginScreen() {
       return r.json();
     })
     .then(data => {
-      if (data && data.db === true) {
+      if (!data || data.ok !== true) {
+        throw new Error('Invalid health response');
+      }
+
+      const issues = [];
+      if (!data.db) {
+        issues.push('Database: not connected (check MONGODB_URI in Vercel)');
+      }
+      if (!data.auth) {
+        issues.push('Login: not configured (set ADMIN_USERNAME, ADMIN_PASSWORD_HASH and ADMIN_JWT_SECRET in Vercel)');
+      }
+      if (!data.blob) {
+        issues.push('Photos: not set up (create a Blob store in Vercel)');
+      }
+
+      if (issues.length === 0) {
         statusLine.style.color = '#555';
-        statusLine.textContent = 'Server: online · Database: connected';
+        statusLine.textContent = 'Server: online · Database: connected · Login: configured · Photos: ready';
       } else {
         statusLine.style.color = '#c62828';
-        statusLine.textContent = 'Database: not connected';
+        statusLine.textContent = issues.join(' · ');
       }
     })
     .catch(() => {
       statusLine.style.color = '#c62828';
-      statusLine.textContent = 'Server: not reachable';
+      statusLine.textContent = 'Server: not reachable (check Vercel deployment)';
     });
 
   const form = h('form', {
@@ -712,6 +727,8 @@ function showLoginScreen() {
           errorEl.textContent = (resData && resData.error) || 'Incorrect username or password';
         } else if (res.status === 429) {
           errorEl.textContent = (resData && resData.error) || 'Too many attempts. Please try again later.';
+        } else if (res.status === 503) {
+          errorEl.textContent = (resData && resData.error) || 'Service unavailable. Check configuration in Vercel.';
         } else {
           errorEl.textContent = 'Server error. Check the Vercel environment variables (MONGODB_URI, ADMIN_USERNAME, ADMIN_PASSWORD_HASH, ADMIN_JWT_SECRET) and the Vercel logs.';
         }

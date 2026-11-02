@@ -13,26 +13,36 @@ function base64urlDecode(str) {
 }
 
 function getJwtSecret() {
-  return process.env.ADMIN_JWT_SECRET || 'signage_basket_default_secret_key_change_in_production';
+  const secret = process.env.ADMIN_JWT_SECRET;
+  if (!secret || typeof secret !== 'string' || secret.trim().length < 32) {
+    return null;
+  }
+  return secret.trim();
 }
 
 function signToken(payload) {
+  const secret = getJwtSecret();
+  if (!secret) {
+    throw new Error('ADMIN_JWT_SECRET is not configured or too short (min 32 characters)');
+  }
   const header = { alg: 'HS256', typ: 'JWT' };
   const encodedHeader = base64urlEncode(JSON.stringify(header));
   const encodedPayload = base64urlEncode(JSON.stringify(payload));
   const message = `${encodedHeader}.${encodedPayload}`;
-  const signature = crypto.createHmac('sha256', getJwtSecret()).update(message).digest('base64url');
+  const signature = crypto.createHmac('sha256', secret).update(message).digest('base64url');
   return `${message}.${signature}`;
 }
 
 function verifyToken(token) {
+  const secret = getJwtSecret();
+  if (!secret) return null;
   if (!token || typeof token !== 'string') return null;
   const parts = token.split('.');
   if (parts.length !== 3) return null;
 
   const [headerB64, payloadB64, signature] = parts;
   const message = `${headerB64}.${payloadB64}`;
-  const expectedSignature = crypto.createHmac('sha256', getJwtSecret()).update(message).digest('base64url');
+  const expectedSignature = crypto.createHmac('sha256', secret).update(message).digest('base64url');
 
   const sigBuf = Buffer.from(signature);
   const expBuf = Buffer.from(expectedSignature);
@@ -81,10 +91,18 @@ function hashPassword(password) {
   return `${salt}:${key.toString('hex')}`;
 }
 
+function isPasswordHashValid(hash) {
+  if (!hash || typeof hash !== 'string') return false;
+  const parts = hash.trim().split(':');
+  if (parts.length !== 2) return false;
+  const [salt, key] = parts;
+  if (!salt || !key) return false;
+  return /^[0-9a-fA-F]+$/.test(salt) && /^[0-9a-fA-F]+$/.test(key);
+}
+
 function verifyPassword(password, storedHash) {
-  if (!storedHash || typeof storedHash !== 'string') return false;
-  const [salt, keyHex] = storedHash.split(':');
-  if (!salt || !keyHex) return false;
+  if (!isPasswordHashValid(storedHash)) return false;
+  const [salt, keyHex] = storedHash.trim().split(':');
 
   try {
     const expectedKey = Buffer.from(keyHex, 'hex');
@@ -97,16 +115,19 @@ function verifyPassword(password, storedHash) {
 }
 
 async function getStoredPasswordHash(db) {
-  try {
-    const doc = await db.collection('admin').findOne({ _id: 'credentials' });
-    if (doc && doc.passwordHash) {
-      return doc.passwordHash;
+  if (db) {
+    try {
+      const doc = await db.collection('admin').findOne({ _id: 'credentials' });
+      if (doc && doc.passwordHash && typeof doc.passwordHash === 'string') {
+        const h = doc.passwordHash.trim();
+        if (h) return h;
+      }
+    } catch (err) {
+      console.warn('Could not query admin collection:', err.message);
     }
-  } catch (err) {
-    console.warn('Could not query admin collection:', err.message);
   }
-  // Default fallback hash for password "admin123" if no custom env var is set
-  return process.env.ADMIN_PASSWORD_HASH || '331ede4bc1d36862b3483d1dbffad5c0:7b787984125d3a1ab7954532b7c18ad2214778252c8d02bf2bc6e9760ed9fe29e46677743c05edc7e0d7336dad7f890ce289237eaad4c2a8dec4b126b6dc7cf5';
+  const envHash = process.env.ADMIN_PASSWORD_HASH;
+  return (envHash && typeof envHash === 'string') ? envHash.trim() : '';
 }
 
 function checkCsrf(req) {
@@ -170,6 +191,8 @@ module.exports = {
   hashPassword,
   verifyPassword,
   getStoredPasswordHash,
+  isPasswordHashValid,
+  getJwtSecret,
   checkCsrf,
   requireAuth
 };

@@ -24,6 +24,8 @@ const {
   hashPassword,
   verifyPassword,
   getStoredPasswordHash,
+  isPasswordHashValid,
+  getJwtSecret,
   checkCsrf,
   requireAuth
 } = require('./_lib/auth');
@@ -63,15 +65,35 @@ module.exports = async function handler(req, res) {
   // GET /api/health
   if (pathname === '/api/health' && method === 'GET') {
     let dbOk = false;
+    let pingDb = null;
     try {
-      const pingDb = await getDb();
+      pingDb = await getDb();
       await pingDb.command({ ping: 1 });
       dbOk = true;
     } catch (_) {
       dbOk = false;
     }
+
+    let authOk = false;
+    try {
+      const username = (process.env.ADMIN_USERNAME || '').trim();
+      const secret = getJwtSecret();
+      const hash = await getStoredPasswordHash(pingDb);
+      authOk = Boolean(username && secret && isPasswordHashValid(hash));
+    } catch (_) {
+      authOk = false;
+    }
+
+    const blobOk = Boolean(process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim().length > 0);
+
     res.setHeader('Cache-Control', 'no-store');
-    return sendJson(res, 200, { ok: true, time: new Date().toISOString(), db: dbOk });
+    return sendJson(res, 200, {
+      ok: true,
+      time: new Date().toISOString(),
+      db: dbOk,
+      auth: authOk,
+      blob: blobOk
+    });
   }
 
   const isPublicGet = method === 'GET' && (pathname.startsWith('/api/public') || pathname === '/api/sitemap' || pathname === '/api/sitemap.xml');
@@ -82,7 +104,15 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const db = await getDb();
+    let db;
+    try {
+      db = await getDb();
+    } catch (dbErr) {
+      if (pathname === '/api/auth/login') {
+        return sendJson(res, 503, { ok: false, error: 'Database not connected. Check MONGODB_URI in Vercel.' });
+      }
+      throw dbErr;
+    }
 
     // ==========================================
     // 1. PUBLIC ROUTES
@@ -246,17 +276,29 @@ module.exports = async function handler(req, res) {
       }
 
       const ip = getClientIp(req);
-      const allowed = await checkRateLimit(db, `login:${ip}`, 5, 900); // 5 attempts per 15 min
-      if (!allowed) {
-        return sendJson(res, 429, { ok: false, error: 'Too many login attempts. Please try again in 15 minutes.' });
+      try {
+        const allowed = await checkRateLimit(db, `login:${ip}`, 5, 900); // 5 attempts per 15 min
+        if (!allowed) {
+          return sendJson(res, 429, { ok: false, error: 'Too many login attempts. Please try again in 15 minutes.' });
+        }
+      } catch (rateErr) {
+        return sendJson(res, 503, { ok: false, error: 'Database not connected. Check MONGODB_URI in Vercel.' });
+      }
+
+      const expectedUser = (process.env.ADMIN_USERNAME || '').trim();
+      const expectedHash = await getStoredPasswordHash(db);
+      const jwtSecret = getJwtSecret();
+
+      if (!expectedUser || !isPasswordHashValid(expectedHash) || !jwtSecret) {
+        return sendJson(res, 503, {
+          ok: false,
+          error: 'Admin login is not configured. Set ADMIN_USERNAME, ADMIN_PASSWORD_HASH and ADMIN_JWT_SECRET in Vercel, then redeploy.'
+        });
       }
 
       const body = await parseBody(req);
       const usernameInput = String(body.username || '').trim();
       const passwordInput = String(body.password || '');
-
-      const expectedUser = process.env.ADMIN_USERNAME || 'admin';
-      const expectedHash = await getStoredPasswordHash(db);
 
       const isUserMatch = usernameInput.length === expectedUser.length && usernameInput === expectedUser;
       const isPassMatch = verifyPassword(passwordInput, expectedHash);
