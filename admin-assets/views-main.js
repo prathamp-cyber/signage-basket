@@ -684,27 +684,3 @@ function exportFilteredCsv(items) {
   URL.revokeObjectURL(url);
   toast('CSV exported successfully', 'success');
 }
-
-  const headers = ['Date', 'Name', 'Phone', 'Email', 'City', 'Status', 'Design', 'Source', 'Message', 'Notes'];
-  const rows = items.map(it => [
-    new Date(it.createdAt).toISOString(),
-    `"${(it.name || '').replace(/"/g, '""')}"`,
-    `"${it.phone || ''}"`,
-    `"${it.email || ''}"`,
-    `"${(it.city || '').replace(/"/g, '""')}"`,
-    it.status,
-    `"${(it.design?.name || '').replace(/"/g, '""')}"`,
-    `"${(it.source || '').replace(/"/g, '""')}"`,
-    `"${(it.message || '').replace(/"/g, '""')}"`,
-    `"${(it.notes || '').replace(/"/g, '""')}"`
-  ]);
-
-  const csv = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-  const uri = encodeURI(csv);
-  const a = document.createElement('a');
-  a.setAttribute('href', uri);
-  a.setAttribute('download', `signage-basket-enquiries-${new Date().toISOString().slice(0, 10)}.csv`);
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-}
