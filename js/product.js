@@ -466,12 +466,13 @@
     function updateGallery() {
       const hasImages = Array.isArray(item.images) && item.images.length > 0;
       if (hasImages) {
+        const safeName = (item.name || "").replace(/"/g, "&quot;");
         currentSlides = item.images.map((img, idx) => {
           const src = typeof img === "string" ? img : img.url;
           const alt = (typeof img === "object" && img.alt) ? img.alt : `${item.name} - Image ${idx + 1}`;
           return {
             title: alt,
-            html: `<img src="${src}" alt="${alt.replace(/"/g, '&quot;')}" loading="${idx === 0 ? 'eager' : 'lazy'}" width="800" height="600" style="width:100%;height:100%;object-fit:cover;" class="product-gallery-photo" onerror="this.style.display='none';">`
+            html: `<img src="${src}" alt="${alt.replace(/"/g, '&quot;')}" loading="${idx === 0 ? 'eager' : 'lazy'}" width="800" height="600" style="width:100%;height:100%;object-fit:cover;" class="product-gallery-photo" onerror="this.style.display='none';if(!this.parentElement.querySelector('.img-fallback-surface')){const f=document.createElement('div');f.className='img-fallback-surface';f.textContent='${safeName}';this.parentElement.appendChild(f);}">`
           };
         });
         const lineWrap = document.getElementById("lineInputsWrap");

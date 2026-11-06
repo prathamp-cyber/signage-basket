@@ -341,10 +341,15 @@
         }
       }
 
-      // Add alias lookups so catalog['house-nameplates'] resolves to catalog['home-nameplates']
+      // Add non-enumerable alias lookups so catalog['house-nameplates'] resolves to catalog['home-nameplates'] without duplicate keys
       for (const [alias, canonical] of Object.entries(CATEGORY_ALIASES)) {
         if (out[canonical] && !out[alias]) {
-          out[alias] = out[canonical];
+          Object.defineProperty(out, alias, {
+            value: out[canonical],
+            enumerable: false,
+            writable: true,
+            configurable: true
+          });
         }
       }
 

@@ -200,7 +200,8 @@ function initBrowse(categoryKey) {
         const firstImg = item.images[0];
         const src = typeof firstImg === "string" ? firstImg : firstImg.url;
         const alt = (typeof firstImg === "object" && firstImg.alt) ? firstImg.alt : `${item.name} design by Signage Basket`;
-        mediaInner = `<img src="${src}" alt="${alt.replace(/"/g, '&quot;')}" width="500" height="500" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';">`;
+        const safeName = (item.name || "").replace(/"/g, "&quot;");
+        mediaInner = `<img src="${src}" alt="${alt.replace(/"/g, '&quot;')}" width="500" height="500" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';if(!this.parentElement.querySelector('.img-fallback-surface')){const f=document.createElement('div');f.className='img-fallback-surface';f.textContent='${safeName}';this.parentElement.appendChild(f);}">`;
       } else {
         mediaInner = window.renderPlate ? window.renderPlate(item.plate) : "";
       }

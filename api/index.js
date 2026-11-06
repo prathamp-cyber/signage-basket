@@ -1043,6 +1043,19 @@ module.exports = async function handler(req, res) {
 
         const { del } = await import('@vercel/blob');
         await del(url, { token: process.env.BLOB_READ_WRITE_TOKEN });
+
+        // Clean up database references in designs and projects so no broken image links remain
+        await Promise.all([
+          db.collection('designs').updateMany(
+            { 'images.url': url },
+            { $pull: { images: { url } }, $set: { updatedAt: new Date() } }
+          ),
+          db.collection('projects').updateMany(
+            { 'images.url': url },
+            { $pull: { images: { url } }, $set: { updatedAt: new Date() } }
+          )
+        ]).catch(() => {});
+
         return sendJson(res, 200, { ok: true });
       }
 

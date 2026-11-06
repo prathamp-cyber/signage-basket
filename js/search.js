@@ -13,6 +13,7 @@
       { type: "Collections", label: "All Collections", sub: "Browse all signage products", url: "/collection" }
     ];
 
+    const seenSlugs = new Set();
     Object.keys(catalog).forEach((catKey) => {
       const cat = catalog[catKey];
       if (!cat) return;
@@ -25,6 +26,8 @@
 
       if (Array.isArray(cat.items)) {
         cat.items.forEach((item) => {
+          if (!item.slug || seenSlugs.has(item.slug)) return;
+          seenSlugs.add(item.slug);
           designs.push({
             type: "Designs",
             label: item.name,
