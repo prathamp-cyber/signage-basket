@@ -1075,6 +1075,8 @@
   }
 } // end renderProductPage
 
+  window.renderProductPage = renderProductPage;
+
   if (window.SBData && window.SBData.ready) {
     window.SBData.ready.then(renderProductPage);
   }

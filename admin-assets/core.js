@@ -111,6 +111,19 @@ export function h(tag, attrs = {}, ...children) {
   return el;
 }
 
+// BroadcastChannel Synchronization Emitter
+let _syncChannel = null;
+export function broadcastDataSync(detail = {}) {
+  try {
+    if (typeof BroadcastChannel !== 'undefined') {
+      if (!_syncChannel) {
+        _syncChannel = new BroadcastChannel('sb_data_sync');
+      }
+      _syncChannel.postMessage({ type: 'mutation', timestamp: Date.now(), ...detail });
+    }
+  } catch (_) {}
+}
+
 // API Fetch Helper
 export async function api(path, { method = 'GET', body = null } = {}) {
   const headers = {
@@ -142,6 +155,11 @@ export async function api(path, { method = 'GET', body = null } = {}) {
   if (!res.ok || data.ok === false) {
     const msg = data.error || (res.status === 429 ? 'Too many attempts. Please try again later.' : `Request failed (${res.status})`);
     throw new Error(msg);
+  }
+
+  const methodUpper = String(method).toUpperCase();
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(methodUpper)) {
+    broadcastDataSync({ path, method: methodUpper });
   }
 
   return data;

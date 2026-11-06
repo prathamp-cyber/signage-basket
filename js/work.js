@@ -276,6 +276,7 @@ document.addEventListener("DOMContentLoaded", () => {
       setTimeout(checkGalleryEmpty, 1000);
     }
 
+    window.renderWorkPage = initWork;
     initWork();
     if (window.SBData && window.SBData.ready) {
       window.SBData.ready.then(initWork);

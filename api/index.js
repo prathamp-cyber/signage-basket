@@ -66,10 +66,37 @@ module.exports = async function handler(req, res) {
   if (pathname === '/api/health' && method === 'GET') {
     let dbOk = false;
     let pingDb = null;
+    let counts = {
+      designsPublished: 0,
+      designsDraft: 0,
+      projects: 0,
+      reviews: 0,
+      enquiries: 0,
+      settingsUpdatedAt: null
+    };
+
     try {
       pingDb = await getDb();
       await pingDb.command({ ping: 1 });
       dbOk = true;
+
+      const [designsPublished, designsDraft, projects, reviews, enquiries, settingsDoc] = await Promise.all([
+        pingDb.collection('designs').countDocuments({ status: 'published' }).catch(() => 0),
+        pingDb.collection('designs').countDocuments({ status: 'draft' }).catch(() => 0),
+        pingDb.collection('projects').countDocuments({}).catch(() => 0),
+        pingDb.collection('reviews').countDocuments({}).catch(() => 0),
+        pingDb.collection('enquiries').countDocuments({}).catch(() => 0),
+        pingDb.collection('settings').findOne({ _id: 'global' }, { projection: { updatedAt: 1 } }).catch(() => null)
+      ]);
+
+      counts = {
+        designsPublished,
+        designsDraft,
+        projects,
+        reviews,
+        enquiries,
+        settingsUpdatedAt: settingsDoc?.updatedAt ? new Date(settingsDoc.updatedAt).toISOString() : null
+      };
     } catch (_) {
       dbOk = false;
     }
@@ -92,13 +119,25 @@ module.exports = async function handler(req, res) {
       time: new Date().toISOString(),
       db: dbOk,
       auth: authOk,
-      blob: blobOk
+      blob: blobOk,
+      counts,
+      designsPublished: counts.designsPublished,
+      designsDraft: counts.designsDraft,
+      projects: counts.projects,
+      reviews: counts.reviews,
+      enquiries: counts.enquiries,
+      settingsUpdatedAt: counts.settingsUpdatedAt
     });
   }
 
   const isPublicGet = method === 'GET' && (pathname.startsWith('/api/public') || pathname === '/api/sitemap' || pathname === '/api/sitemap.xml');
   if (isPublicGet) {
-    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+    const isFresh = searchParams.get('fresh') === '1' || searchParams.has('t');
+    if (isFresh) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    } else {
+      res.setHeader('Cache-Control', 'public, s-maxage=10, stale-while-revalidate=30');
+    }
   } else {
     res.setHeader('Cache-Control', 'no-store');
   }

@@ -49,8 +49,59 @@ export async function renderDashboard(root) {
     h('p', { class: 'form-hint', text: 'Welcome to your Signage Basket management dashboard.' })
   );
 
-  // Quick Action Buttons
-  const quickActions = h('div', { style: 'display:flex; gap:10px; margin-bottom:24px; flex-wrap:wrap;' },
+  // Quick Action Buttons & Live Sync Diagnostic
+  const syncStatusPill = h('span', {
+    class: 'status-pill status-contacted',
+    style: 'display:inline-flex; align-items:center; gap:5px; font-weight:600; text-transform:none; padding:4px 10px;',
+    text: 'Sync: Ready'
+  });
+
+  const verifySyncBtn = h('button', {
+    id: 'verifyLiveSyncBtn',
+    class: 'btn btn-outline btn-sm',
+    style: 'margin-left:auto; display:inline-flex; align-items:center; gap:6px;',
+    onclick: async (e) => {
+      const btn = e.currentTarget;
+      const originalHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.textContent = 'Verifying sync...';
+      try {
+        const t = Date.now();
+        const [healthRes, catRes] = await Promise.all([
+          api(`/api/health?t=${t}`).catch(err => ({ ok: false, error: err.message })),
+          fetch(`/api/public/catalog?fresh=1&t=${t}`).then(r => r.json()).catch(err => ({ ok: false, error: err.message }))
+        ]);
+
+        const dbPublished = healthRes.counts?.designsPublished ?? healthRes.designsPublished ?? 0;
+        const liveItems = Array.isArray(catRes.items) ? catRes.items.length : 0;
+
+        if (healthRes.ok && catRes.ok && dbPublished === liveItems) {
+          toast(`Live sync healthy: ${liveItems} published designs in sync (DB ↔ Edge API)`, 'success');
+          syncStatusPill.className = 'status-pill status-published';
+          syncStatusPill.textContent = `Sync: 100% (${liveItems} live)`;
+        } else if (healthRes.ok && catRes.ok) {
+          toast(`Sync mismatch: DB has ${dbPublished} published designs, public API returned ${liveItems}`, 'error');
+          syncStatusPill.className = 'status-pill status-draft';
+          syncStatusPill.textContent = `Mismatch: ${dbPublished} DB vs ${liveItems} Edge`;
+        } else {
+          const errMsg = healthRes.error || catRes.error || 'Endpoint unreachable';
+          toast(`Live sync check failed: ${errMsg}`, 'error');
+          syncStatusPill.className = 'status-pill status-draft';
+          syncStatusPill.textContent = 'Sync: Disconnected';
+        }
+      } catch (err) {
+        toast(`Sync check error: ${err.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      }
+    }
+  },
+    h('span', { class: 'icon i-refresh' }),
+    h('span', { text: 'Verify Live Sync' })
+  );
+
+  const quickActions = h('div', { style: 'display:flex; gap:10px; margin-bottom:24px; flex-wrap:wrap; align-items:center;' },
     h('button', { class: 'btn btn-ink btn-sm', onclick: () => go('designs/new') },
       h('span', { class: 'icon i-plate' }),
       h('span', { text: 'Add design' })
@@ -62,7 +113,9 @@ export async function renderDashboard(root) {
     h('button', { class: 'btn btn-outline btn-sm', onclick: () => go('reviews') },
       h('span', { class: 'icon i-star' }),
       h('span', { text: 'Add review' })
-    )
+    ),
+    syncStatusPill,
+    verifySyncBtn
   );
 
   // 4 Clickable Stat Cards

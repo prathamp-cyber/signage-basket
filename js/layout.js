@@ -316,6 +316,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (window.SB && window.SB.applySettings) {
       window.SB.applySettings();
     }
+    if (window.SBData && window.SBData.ready) {
+      window.SBData.ready.then(() => {
+        if (window.SB && window.SB.applySettings) {
+          window.SB.applySettings();
+        }
+      });
+    }
+    window.addEventListener("sb:datasync", () => {
+      if (window.SB && window.SB.applySettings) {
+        window.SB.applySettings();
+      }
+    });
 
     // 5. Mobile Toggle & Drawer
     const toggleBtn = document.getElementById("mobileNavToggle");

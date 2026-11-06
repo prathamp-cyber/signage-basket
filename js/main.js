@@ -480,6 +480,9 @@ function populateAboutWorkStrip() {
   }
 }
 
+window.populateInstallationsStrip = populateInstallationsStrip;
+window.populateAboutWorkStrip = populateAboutWorkStrip;
+
 if (window.SBData && window.SBData.ready) {
   window.SBData.ready.then(() => {
     populateInstallationsStrip();
