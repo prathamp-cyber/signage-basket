@@ -113,10 +113,31 @@
   </script>
 
   <link rel="stylesheet" href="/css/styles.css">
+  <!-- Critical Brand Logo Preloader -->
+  <style>
+    #sb-preloader{position:fixed;top:0;left:0;width:100vw;height:100vh;background-color:#0b0b0c;z-index:99999;display:flex;align-items:center;justify-content:center;opacity:1;visibility:visible;transition:opacity .35s ease,visibility .35s ease;pointer-events:auto}
+    #sb-preloader.fade-out{opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+    .sb-preloader-inner{display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center}
+    .sb-preloader-logo{height:58px;width:auto;max-width:240px;filter:drop-shadow(0 2px 14px rgba(0,0,0,.6));animation:sbLogoPulse 2s ease-in-out infinite}
+    .sb-preloader-bar{width:130px;height:2px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden;position:relative}
+    .sb-preloader-progress{position:absolute;top:0;left:0;bottom:0;width:100%;background:linear-gradient(90deg,transparent,#c5a059,#f3e5ab,#c5a059,transparent);animation:sbShimmer 1.4s cubic-bezier(.4,0,.2,1) infinite}
+    @keyframes sbLogoPulse{0%,100%{transform:scale(1);opacity:.95}50%{transform:scale(1.03);opacity:1;filter:drop-shadow(0 0 16px rgba(197,160,89,.45))}}
+    @keyframes sbShimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+  </style>
 </head>
 <body id="top" class="home-page">
 
-  <a href="#main-content" class="skip-link">Skip to main content</a>
+    <!-- Centered Brand Logo Preloader Overlay -->
+  <div id="sb-preloader" class="sb-preloader" aria-hidden="true">
+    <div class="sb-preloader-inner">
+      <img src="/assets/logo/logo-wordmark-light.svg" alt="Signage Basket" class="sb-preloader-logo" width="220" height="60" fetchpriority="high">
+      <div class="sb-preloader-bar">
+        <div class="sb-preloader-progress"></div>
+      </div>
+    </div>
+  </div>
+
+<a href="#main-content" class="skip-link">Skip to main content</a>
   <div id="siteHeaderContainer"></div>
 
   <main id="main-content">

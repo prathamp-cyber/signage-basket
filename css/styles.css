@@ -664,10 +664,27 @@ body.home-page .site-header.is-over-hero .dropdown-item:focus {
   padding: 8px;
   width: 44px;
   height: 44px;
+  min-width: 40px;
+  min-height: 40px;
   font-size: 1.25rem;
   color: var(--ink);
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.mobile-nav-toggle .hamburger-svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+  transition: transform 0.2s ease;
+}
+
+.mobile-nav-toggle:active .hamburger-svg {
+  transform: scale(0.92);
 }
 
 .mobile-nav-overlay {
@@ -2091,20 +2108,110 @@ body.home-page .site-header.is-over-hero .dropdown-item:focus {
 .policy-body ul li { margin-bottom: 0.35rem; }
 .policy-body a { color: var(--ink); text-decoration: underline; }
 
-/* 24. PAGE TRANSITION OVERLAY */
+/* 24. BRAND PRELOADER OVERLAY (#sb-preloader) */
+#sb-preloader,
+.sb-preloader {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #0b0b0c;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+  pointer-events: auto;
+  user-select: none;
+}
+
+#sb-preloader.fade-out,
+.sb-preloader.fade-out {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.sb-preloader-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  text-align: center;
+  transform: translateY(0);
+  transition: transform 0.35s ease;
+}
+
+#sb-preloader.fade-out .sb-preloader-inner,
+.sb-preloader.fade-out .sb-preloader-inner {
+  transform: scale(0.96) translateY(-4px);
+}
+
+.sb-preloader-logo {
+  height: 58px;
+  width: auto;
+  max-width: 240px;
+  display: block;
+  filter: drop-shadow(0 2px 14px rgba(0, 0, 0, 0.6));
+  animation: sbLogoPulse 2s ease-in-out infinite;
+}
+
+.sb-preloader-bar {
+  width: 130px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.sb-preloader-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  background: linear-gradient(90deg, transparent, #c5a059, #f3e5ab, #c5a059, transparent);
+  animation: sbShimmer 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes sbLogoPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.95;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 1;
+    filter: drop-shadow(0 0 16px rgba(197, 160, 89, 0.45));
+  }
+}
+
+@keyframes sbShimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 .page-fade-overlay {
   position: fixed;
-  top: 0; left: 0;
-  width: 100vw; height: 100vh;
-  background-color: #ffffff;
-  z-index: 99999;
+  inset: 0;
+  background-color: #0b0b0c;
+  z-index: 99998;
   opacity: 1;
   pointer-events: auto;
   transition: opacity 0.3s ease;
 }
 .page-fade-overlay.fade-out {
-  opacity: 0;
-  pointer-events: none;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
 }
 
 /* 25. ANIMATION SAFETY & START STATES */
@@ -2161,7 +2268,7 @@ html.js-anim .reveal-up {
   .why-section-grid { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 800px) {
+@media (max-width: 900px) {
   :root { --header-height: 64px; }
 
   body.home-page .site-header,
@@ -2170,8 +2277,62 @@ html.js-anim .reveal-up {
   }
 
   .site-logo-img { height: 36px; }
-  .nav-desktop { display: none; }
-  .mobile-nav-toggle { display: flex; }
+  .nav-desktop { display: none !important; }
+
+  /* Hide Quote & WhatsApp buttons in header on mobile to prevent overflow */
+  .header-quote-btn { display: none !important; }
+  .header-icon-btn.wa-btn { display: none !important; }
+
+  /* Align search and hamburger cleanly on right side */
+  .header-right {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin-left: auto !important;
+  }
+
+  .header-icon-btn {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .mobile-nav-toggle {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    width: 44px !important;
+    height: 44px !important;
+    padding: 8px !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 50% !important;
+    cursor: pointer !important;
+    color: var(--ink) !important;
+    flex-shrink: 0 !important;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .mobile-nav-toggle:hover,
+  .mobile-nav-toggle:focus-visible {
+    background-color: var(--surface) !important;
+    outline: none;
+  }
+
+  body.home-page .site-header.is-over-hero .mobile-nav-toggle {
+    color: #ffffff !important;
+  }
+
+  body.home-page .site-header.is-over-hero .mobile-nav-toggle:hover,
+  body.home-page .site-header.is-over-hero .mobile-nav-toggle:focus-visible {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+  }
 
   .benefits-grid { grid-template-columns: 1fr; }
   .benefit-illustration { width: 120px; }

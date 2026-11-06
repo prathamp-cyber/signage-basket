@@ -3,6 +3,35 @@
  * SVG-icon header, full 4-column ink footer with social icons and SEO row.
  */
 
+// Global Centered Brand Preloader Dismissal Lifecycle
+(function initPreloader() {
+  function dismissPreloader() {
+    const preloader = document.getElementById("sb-preloader");
+    if (!preloader || preloader.dataset.dismissed === "true") return;
+    preloader.dataset.dismissed = "true";
+    preloader.style.pointerEvents = "none";
+    preloader.classList.add("fade-out");
+    setTimeout(() => {
+      try { preloader.remove(); } catch (e) { preloader.style.display = "none"; }
+    }, 450);
+  }
+
+  // Fallback safety timeout (1500ms max) so it never hangs or locks the screen
+  const fallbackTimer = setTimeout(dismissPreloader, 1500);
+
+  if (document.readyState === "complete") {
+    clearTimeout(fallbackTimer);
+    setTimeout(dismissPreloader, 60);
+  } else {
+    window.addEventListener("load", () => {
+      clearTimeout(fallbackTimer);
+      dismissPreloader();
+    });
+  }
+
+  window.dismissPreloader = dismissPreloader;
+})();
+
 document.addEventListener("DOMContentLoaded", () => {
   try {
     const config = (window.SBData && window.SBData.settings) ? window.SBData.settings() : (window.SIGNAGE_CONFIG || {
@@ -22,24 +51,25 @@ document.addEventListener("DOMContentLoaded", () => {
     const rawPath = window.location.pathname.replace(/\/+$/, "").replace(/\.html$/, "");
     const normalizedPath = rawPath === "" || rawPath === "/index" ? "/" : rawPath;
 
-    // 1. Page Transition Fade Overlay
-    let pageFade = document.getElementById("pageFadeOverlay");
-    if (!pageFade) {
-      pageFade = document.createElement("div");
-      pageFade.id = "pageFadeOverlay";
-      pageFade.className = "page-fade-overlay";
-      document.body.prepend(pageFade);
+    // 1. Ensure Centered Brand Preloader exists in DOM
+    let preloader = document.getElementById("sb-preloader");
+    if (!preloader && document.body) {
+      preloader = document.createElement("div");
+      preloader.id = "sb-preloader";
+      preloader.className = "sb-preloader";
+      preloader.setAttribute("aria-hidden", "true");
+      preloader.innerHTML = `
+        <div class="sb-preloader-inner">
+          <img src="/assets/logo/logo-wordmark-light.svg" alt="Signage Basket" class="sb-preloader-logo" width="220" height="60" fetchpriority="high">
+          <div class="sb-preloader-bar">
+            <div class="sb-preloader-progress"></div>
+          </div>
+        </div>
+      `;
+      document.body.prepend(preloader);
     }
 
-    setTimeout(() => { if (pageFade) pageFade.classList.add("fade-out"); }, 50);
-    setTimeout(() => {
-      if (pageFade) {
-        pageFade.classList.add("fade-out");
-        pageFade.style.pointerEvents = "none";
-      }
-    }, 3000);
-
-    // Intercept internal link clicks for page fade (handles extensionless same-origin paths)
+    // Intercept internal link clicks for seamless preloader transition
     document.querySelectorAll("a[href]").forEach((link) => {
       const href = link.getAttribute("href");
       if (
@@ -55,11 +85,26 @@ document.addEventListener("DOMContentLoaded", () => {
           link.addEventListener("click", (e) => {
             if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
             e.preventDefault();
-            if (pageFade) {
-              pageFade.classList.remove("fade-out");
-              pageFade.style.pointerEvents = "auto";
+            let p = document.getElementById("sb-preloader");
+            if (!p && document.body) {
+              p = document.createElement("div");
+              p.id = "sb-preloader";
+              p.className = "sb-preloader fade-out";
+              p.setAttribute("aria-hidden", "true");
+              p.innerHTML = `
+                <div class="sb-preloader-inner">
+                  <img src="/assets/logo/logo-wordmark-light.svg" alt="Signage Basket" class="sb-preloader-logo" width="220" height="60">
+                  <div class="sb-preloader-bar"><div class="sb-preloader-progress"></div></div>
+                </div>
+              `;
+              document.body.prepend(p);
             }
-            setTimeout(() => { window.location.href = href; }, 280);
+            if (p) {
+              p.style.pointerEvents = "auto";
+              p.classList.remove("fade-out");
+              delete p.dataset.dismissed;
+            }
+            setTimeout(() => { window.location.href = href; }, 180);
           });
         }
       }
@@ -110,8 +155,11 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
 
             <div class="header-right">
-              <button class="header-icon-btn" id="searchToggleBtn" aria-label="Search" aria-expanded="false">
-                <span class="icon i-search" aria-hidden="true"></span>
+              <button class="header-icon-btn" id="searchToggleBtn" aria-label="Search" aria-expanded="false" title="Search">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="11" cy="11" r="6.5"></circle>
+                  <path d="M20 20l-4.4-4.4"></path>
+                </svg>
               </button>
               <a href="${waUrl}" target="_blank" rel="noopener" class="header-icon-btn wa-btn" aria-label="Chat on WhatsApp" title="WhatsApp Us" data-sb-href="whatsapp">
                 <span class="icon i-whatsapp" aria-hidden="true"></span>
@@ -120,8 +168,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 <span>Get a Quote</span>
                 <span class="btn-arrow" aria-hidden="true"><span class="icon i-arrow-right"></span></span>
               </a>
-              <button class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Open Menu" aria-expanded="false">
-                <span class="icon i-menu" aria-hidden="true"></span>
+              <button class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Open Menu" aria-expanded="false" title="Menu">
+                <svg class="hamburger-svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="3" y1="6" x2="21" y2="6"></line>
+                  <line x1="3" y1="12" x2="21" y2="12"></line>
+                  <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
               </button>
             </div>
           </div>
@@ -148,8 +200,11 @@ document.addEventListener("DOMContentLoaded", () => {
               <img src="/assets/logo/logo-wordmark.svg" alt="Signage Basket" height="36" style="width:auto;"
                 onerror="this.style.display='none';">
             </a>
-            <button class="mobile-drawer-close" id="mobileDrawerClose" aria-label="Close Menu">
-              <span class="icon i-close" aria-hidden="true"></span>
+            <button class="mobile-drawer-close" id="mobileDrawerClose" aria-label="Close Menu" title="Close Menu">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
             </button>
           </div>
           <nav class="mobile-nav-links" aria-label="Mobile Navigation">
@@ -342,14 +397,37 @@ document.addEventListener("DOMContentLoaded", () => {
       evaluateHeaderState();
     }
 
-    if (toggleBtn) toggleBtn.addEventListener("click", () => setDrawerState(true));
-    if (closeBtn)  closeBtn.addEventListener("click",  () => setDrawerState(false));
+    if (toggleBtn) {
+      toggleBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const isOpen = mobileOverlay && mobileOverlay.classList.contains("open");
+        setDrawerState(!isOpen);
+      });
+    }
+
+    if (closeBtn) {
+      closeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        setDrawerState(false);
+      });
+    }
 
     if (mobileOverlay) {
+      mobileOverlay.addEventListener("click", (e) => {
+        if (e.target === mobileOverlay) {
+          setDrawerState(false);
+        }
+      });
       mobileOverlay.querySelectorAll("a").forEach((link) => {
         link.addEventListener("click", () => setDrawerState(false));
       });
     }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && mobileOverlay && mobileOverlay.classList.contains("open")) {
+        setDrawerState(false);
+      }
+    });
 
     // 6. Header Scroll & Over-Hero State Handling
     const headerEl = document.getElementById("mainHeader");
