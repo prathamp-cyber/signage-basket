@@ -18,13 +18,15 @@
       const pathParts = window.location.pathname.replace(/\/+$/, "").split("/");
       const lastSegment = pathParts[pathParts.length - 1] || "";
       if (pathParts.includes("design") && lastSegment && lastSegment !== "design") {
-        return decodeURIComponent(lastSegment);
+        return decodeURIComponent(lastSegment).replace(/\.html$/, "");
       }
       const params = new URLSearchParams(window.location.search);
-      return params.get("slug") || params.get("design") || "";
+      const q = params.get("slug") || params.get("design") || params.get("id") || "";
+      return q.replace(/\.html$/, "");
     }
 
-    const slug = getDesignSlug();
+    const rawSlug = getDesignSlug();
+    const slug = rawSlug ? rawSlug.trim().toLowerCase() : "";
 
     // Look up slug across ALL CATALOG categories
     let item = null;
@@ -35,7 +37,7 @@
     for (const catK in catalog) {
       const cat = catalog[catK];
       if (cat && Array.isArray(cat.items)) {
-        const found = cat.items.find((p) => p.slug === slug);
+        const found = cat.items.find((p) => p.slug && p.slug.trim().toLowerCase() === slug);
         if (found) {
           item = found;
           category = cat;

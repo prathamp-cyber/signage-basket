@@ -50,6 +50,10 @@ module.exports = async function handler(req, res) {
     cleanSubPath = parsedUrl.pathname.replace(/^\/api\/?/, '').replace(/\/+$/, '');
   }
 
+  if (cleanSubPath === 'index') {
+    cleanSubPath = '';
+  }
+
   const pathname = cleanSubPath ? `/api/${cleanSubPath}` : '/api';
   const method = (req.method || 'GET').toUpperCase();
   const searchParams = parsedUrl.searchParams;
@@ -60,6 +64,24 @@ module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
     return res.end();
+  }
+
+  // GET /api or GET /api/index
+  if ((pathname === '/api' || pathname === '/api/index') && method === 'GET') {
+    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+    return sendJson(res, 200, {
+      ok: true,
+      service: 'Signage Basket API',
+      status: 'operational',
+      endpoints: {
+        health: '/api/health',
+        catalog: '/api/public/catalog',
+        projects: '/api/public/projects',
+        reviews: '/api/public/reviews',
+        settings: '/api/public/settings',
+        sitemap: '/sitemap.xml'
+      }
+    });
   }
 
   // GET /api/health

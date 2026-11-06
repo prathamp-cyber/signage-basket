@@ -7,14 +7,43 @@ function initBrowse(categoryKey) {
   const catalog = (window.SBData && window.SBData.catalog) ? window.SBData.catalog() : (window.CATALOG || {});
   let catKey = categoryKey;
 
-  // If no categoryKey provided, resolve from location.pathname (lowercased, trailing slash removed)
+  // Resolve from query parameter, pathname, or category aliases
   if (!catKey) {
-    const path = window.location.pathname.toLowerCase().replace(/\/+$/, "") || "/";
-    for (const key in catalog) {
-      const catPage = (catalog[key].page || "").toLowerCase().replace(/\/+$/, "");
-      if (catPage === path) {
-        catKey = key;
-        break;
+    const params = new URLSearchParams(window.location.search);
+    const queryCat = (params.get("category") || params.get("cat") || params.get("type") || params.get("key") || "").trim().toLowerCase();
+
+    // Normalize path by lowercasing and stripping trailing slash & .html extension
+    const cleanPath = window.location.pathname.toLowerCase().replace(/\/+$/, "").replace(/\.html$/, "") || "/";
+
+    if (queryCat && catalog[queryCat]) {
+      catKey = queryCat;
+    } else {
+      // 1) Match by category.page property
+      for (const key in catalog) {
+        const cat = catalog[key];
+        const catPage = (cat.page || "").toLowerCase().replace(/\/+$/, "").replace(/\.html$/, "");
+        if (catPage && catPage === cleanPath) {
+          catKey = key;
+          break;
+        }
+      }
+
+      // 2) Match by key directly in path (e.g. /home-nameplates, /house-nameplates)
+      if (!catKey) {
+        const pathSlug = cleanPath.replace(/^\//, "");
+        if (pathSlug && catalog[pathSlug]) {
+          catKey = pathSlug;
+        }
+      }
+
+      // 3) Match queryCat against all catalog keys case-insensitively
+      if (!catKey && queryCat) {
+        for (const key in catalog) {
+          if (key.toLowerCase() === queryCat) {
+            catKey = key;
+            break;
+          }
+        }
       }
     }
   }

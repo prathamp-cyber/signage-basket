@@ -27,12 +27,44 @@
       "destination": "/product.html"
     },
     {
+      "source": "/collection",
+      "destination": "/collection.html"
+    },
+    {
+      "source": "/our-work",
+      "destination": "/our-work.html"
+    },
+    {
+      "source": "/about",
+      "destination": "/about.html"
+    },
+    {
+      "source": "/contact",
+      "destination": "/contact.html"
+    },
+    {
+      "source": "/privacy-policy",
+      "destination": "/privacy-policy.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/terms.html"
+    },
+    {
+      "source": "/shipping-installation",
+      "destination": "/shipping-installation.html"
+    },
+    {
       "source": "/admin",
       "destination": "/admin.html"
     },
     {
       "source": "/sitemap.xml",
       "destination": "/api/index?__path=sitemap"
+    },
+    {
+      "source": "/api",
+      "destination": "/api/index"
     },
     {
       "source": "/api/:path((?!index$).*)",
@@ -42,6 +74,27 @@
   "headers": [
     {
       "source": "/admin",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "same-origin"
+        }
+      ]
+    },
+    {
+      "source": "/admin.html",
       "headers": [
         {
           "key": "X-Robots-Tag",
