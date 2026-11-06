@@ -7,11 +7,12 @@ function initBrowse(categoryKey) {
   const catalog = (window.SBData && window.SBData.catalog) ? window.SBData.catalog() : (window.CATALOG || {});
   let catKey = categoryKey;
 
-  // If no categoryKey provided, resolve from location.pathname
+  // If no categoryKey provided, resolve from location.pathname (lowercased, trailing slash removed)
   if (!catKey) {
-    const path = window.location.pathname.replace(/\/$/, "");
+    const path = window.location.pathname.toLowerCase().replace(/\/+$/, "") || "/";
     for (const key in catalog) {
-      if (catalog[key].page === path || catalog[key].page === path + "/") {
+      const catPage = (catalog[key].page || "").toLowerCase().replace(/\/+$/, "");
+      if (catPage === path) {
         catKey = key;
         break;
       }
@@ -24,16 +25,29 @@ function initBrowse(categoryKey) {
   // Unknown path / category not found state
   if (!category) {
     document.title = "Category Not Found | Signage Basket";
+    let noindexMeta = document.querySelector('meta[name="robots"]');
+    if (!noindexMeta) {
+      noindexMeta = document.createElement("meta");
+      noindexMeta.name = "robots";
+      document.head.appendChild(noindexMeta);
+    }
+    noindexMeta.content = "noindex";
+
     if (mainContent) {
       mainContent.innerHTML = `
         <section class="section-pad">
-          <div class="page-container category-not-found">
+          <div class="page-container category-not-found" style="text-align:center;padding:4rem 1rem;">
             <h1>Category Not Found</h1>
-            <p>The signage collection you are looking for does not exist or has been moved.</p>
-            <a href="/collection" class="btn btn-primary">
-              <span>View All Collections</span>
-              <span class="btn-arrow" aria-hidden="true"><span class="icon i-arrow-right"></span></span>
-            </a>
+            <p style="color:var(--muted);margin:1rem auto 2rem;max-width:540px;">The signage collection you are looking for does not exist or has been moved.</p>
+            <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+              <a href="/collection" class="btn btn-primary" title="Browse All Collections">
+                <span>View All Collections</span>
+                <span class="btn-arrow" aria-hidden="true"><span class="icon i-arrow-right"></span></span>
+              </a>
+              <a href="/" class="btn btn-outline" title="Back to Home">
+                <span>Back to Home</span>
+              </a>
+            </div>
           </div>
         </section>
       `;
@@ -159,8 +173,8 @@ function initBrowse(categoryKey) {
     }
     filtersContainer.setAttribute("role", "tablist");
 
-    filtersContainer.innerHTML = catFilters.map((f, i) => `
-      <button type="button" class="chip filter-chip ${i === 0 ? "active is-active" : ""}" role="tab" aria-selected="${i === 0 ? "true" : "false"}" data-filter="${f.tag}">
+    filtersContainer.innerHTML = catFilters.map((f, idx) => `
+      <button type="button" class="chip ${f.tag === activeFilter ? "active" : ""}" role="tab" aria-selected="${f.tag === activeFilter}" data-filter="${f.tag}">
         ${f.label}
       </button>
     `).join("");
@@ -225,38 +239,42 @@ function initBrowse(categoryKey) {
       `;
     }).join("");
 
-    if (window.autoFitPlates) window.autoFitPlates(grid);
+    if (window.autoFitPlates) {
+      window.autoFitPlates(grid);
+    }
   }
 
-  // Initial Grid Render
-  renderGrid(items);
+  renderGrid(visibleItems);
 
-  // Filter click handling with GSAP smooth transition
+  // Filter interaction
   if (filtersContainer) {
     filtersContainer.addEventListener("click", (e) => {
-      const btn = e.target.closest(".chip, .filter-chip, .work-filter-btn");
-      if (!btn) return;
-      const filter = btn.getAttribute("data-filter");
-      if (filter === activeFilter) return;
+      const chip = e.target.closest(".chip");
+      if (!chip) return;
+      const tag = chip.getAttribute("data-filter");
+      if (!tag || tag === activeFilter) return;
 
-      filtersContainer.querySelectorAll(".chip, .filter-chip, .work-filter-btn").forEach((b) => {
-        b.classList.remove("active", "is-active");
-        b.setAttribute("aria-selected", "false");
+      activeFilter = tag;
+      filtersContainer.querySelectorAll(".chip").forEach((c) => {
+        const isActive = c.getAttribute("data-filter") === activeFilter;
+        c.classList.toggle("active", isActive);
+        c.setAttribute("aria-selected", isActive);
       });
-      btn.classList.add("active", "is-active");
-      btn.setAttribute("aria-selected", "true");
-      activeFilter = filter;
 
-      visibleItems = filter === "all" ? items : items.filter((item) => (item.tags || []).includes(filter));
+      if (activeFilter === "all") {
+        visibleItems = [...items];
+      } else {
+        visibleItems = items.filter((it) => Array.isArray(it.tags) && it.tags.includes(activeFilter));
+      }
+
       updateResultCount(visibleItems.length);
 
-      const prefersReduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-      if (!prefersReduced && window.gsap && grid) {
+      if (typeof gsap !== "undefined") {
         gsap.to(grid.children, {
           opacity: 0,
           scale: 0.96,
-          duration: 0.2,
+          duration: 0.18,
+          stagger: 0.02,
           ease: "power2.in",
           onComplete: () => {
             renderGrid(visibleItems);

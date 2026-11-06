@@ -51,18 +51,35 @@
     // 2. Unknown slug: Friendly "Design Not Found" state
     if (!item || !category) {
       document.title = "Design Not Found | Signage Basket";
+      let noindexMeta = document.querySelector('meta[name="robots"]');
+      if (!noindexMeta) {
+        noindexMeta = document.createElement("meta");
+        noindexMeta.name = "robots";
+        document.head.appendChild(noindexMeta);
+      }
+      noindexMeta.content = "noindex";
+
       appContainer.innerHTML = `
-        <div class="product-not-found">
+        <div class="product-not-found" style="text-align:center;padding:5rem 1rem;">
           <h1>Design Not Found</h1>
-          <p>We couldn't find the design you're looking for. Explore our full collection of handcrafted signage and nameplates made in Gandhidham.</p>
-          <a href="/collection" class="btn btn-primary" title="Browse Collections">
-            <span>Browse Collections</span>
-            <span class="btn-arrow" aria-hidden="true"><span class="icon i-arrow-right"></span></span>
-          </a>
+          <p style="color:var(--muted);margin:1rem auto 2rem;max-width:540px;">We couldn't find the design you're looking for. Explore our full collection of handcrafted signage and nameplates made in Gandhidham.</p>
+          <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+            <a href="/collection" class="btn btn-primary" title="Browse Collections">
+              <span>Browse Collections</span>
+              <span class="btn-arrow" aria-hidden="true"><span class="icon i-arrow-right"></span></span>
+            </a>
+            <a href="/" class="btn btn-outline" title="Back to Home">
+              <span>Back to Home</span>
+            </a>
+          </div>
         </div>
       `;
       return;
     }
+
+    // Valid design found: remove noindex if previously added
+    const noindexMeta = document.querySelector('meta[name="robots"][content*="noindex"]');
+    if (noindexMeta) noindexMeta.remove();
 
     // Category defaults fallback
     const catDefaults = category.defaults || {};
@@ -391,7 +408,7 @@
 
           <form id="quoteForm" novalidate>
             <!-- Hidden honeypot -->
-            <input type="text" name="company_website" style="display:none;" tabindex="-1" autocomplete="off">
+            <input type="text" name="website" style="display:none !important; position:absolute !important; left:-9999px !important;" tabindex="-1" autocomplete="off">
 
             <div class="quote-field" id="fieldFullName">
               <label for="quoteName">Full Name <span class="req">*</span></label>
@@ -421,7 +438,6 @@
               <textarea id="quoteNotes" class="quote-textarea" placeholder="Any specific requirements, fonts, or questions..."></textarea>
             </div>
 
-            <input type="text" name="website" style="display:none !important; position:absolute !important; left:-9999px !important;" tabindex="-1" autocomplete="off">
             <button type="submit" class="btn btn-primary quote-modal-submit-btn" id="quoteSubmitBtn">
               <span>Send Request on WhatsApp</span>
               <span class="btn-arrow" aria-hidden="true"><span class="icon i-arrow-right"></span></span>
@@ -455,7 +471,7 @@
           const alt = (typeof img === "object" && img.alt) ? img.alt : `${item.name} - Image ${idx + 1}`;
           return {
             title: alt,
-            html: `<img src="${src}" alt="${alt.replace(/"/g, '&quot;')}" loading="${idx === 0 ? 'eager' : 'lazy'}" width="800" height="600" style="width:100%;height:100%;object-fit:cover;" class="product-gallery-photo">`
+            html: `<img src="${src}" alt="${alt.replace(/"/g, '&quot;')}" loading="${idx === 0 ? 'eager' : 'lazy'}" width="800" height="600" style="width:100%;height:100%;object-fit:cover;" class="product-gallery-photo" onerror="this.style.display='none';">`
           };
         });
         const lineWrap = document.getElementById("lineInputsWrap");
@@ -761,7 +777,7 @@
     if (quoteForm) {
       quoteForm.addEventListener("submit", (e) => {
         e.preventDefault();
-        const honeypot = quoteForm.querySelector("input[name='company_website']");
+        const honeypot = quoteForm.querySelector("input[name='website']");
         if (honeypot && honeypot.value) return; // bot detection
 
         let isValid = true;

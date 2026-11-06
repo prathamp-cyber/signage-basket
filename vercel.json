@@ -3,22 +3,6 @@
   "trailingSlash": false,
   "rewrites": [
     {
-      "source": "/api/:path((?!index$).*)",
-      "destination": "/api/index?__path=:path"
-    },
-    {
-      "source": "/sitemap.xml",
-      "destination": "/api/index?__path=sitemap"
-    },
-    {
-      "source": "/admin",
-      "destination": "/admin.html"
-    },
-    {
-      "source": "/design/:slug",
-      "destination": "/product.html"
-    },
-    {
       "source": "/house-nameplates",
       "destination": "/category.html"
     },
@@ -37,6 +21,22 @@
     {
       "source": "/wall-branding",
       "destination": "/category.html"
+    },
+    {
+      "source": "/design/:slug",
+      "destination": "/product.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/index?__path=sitemap"
+    },
+    {
+      "source": "/api/:path((?!index$).*)",
+      "destination": "/api/index?__path=:path"
     }
   ],
   "headers": [

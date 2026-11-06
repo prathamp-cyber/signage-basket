@@ -198,9 +198,16 @@ export async function renderDesigns(root) {
             }
           }, isPub ? 'Unpublish' : 'Publish');
 
-          const delBtn = h('button', {
+          const viewBtn = isPub ? h('a', {
+            href: `/design/${encodeURIComponent(item.slug)}?fresh=1`,
+            target: '_blank',
+            rel: 'noopener',
             class: 'btn btn-outline btn-sm',
-            style: 'color:var(--danger); margin-left:auto;',
+            title: 'View on site'
+          }, 'View') : null;
+
+          const delBtn = h('button', {
+            class: 'btn btn-outline btn-sm btn-del',
             title: 'Delete design',
             onclick: async () => {
               const ok = await confirmDialog({
@@ -221,7 +228,11 @@ export async function renderDesigns(root) {
             }
           }, '✕');
 
-          const actionsEl = h('div', { class: 'card-actions' }, editBtn, dupBtn, pubBtn, delBtn);
+          const actionButtons = [editBtn, dupBtn, pubBtn];
+          if (viewBtn) actionButtons.push(viewBtn);
+          actionButtons.push(delBtn);
+
+          const actionsEl = h('div', { class: 'card-actions' }, ...actionButtons);
           bodyEl.appendChild(actionsEl);
 
           card.append(mediaEl, bodyEl);

@@ -11,6 +11,8 @@
   let _reviews = null;
   let _settings = null;
 
+  const isFresh = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("fresh") === "1";
+
   function fetchWithTimeout(url, ms = 3000) {
     const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
     const timer = controller ? setTimeout(() => controller.abort(), ms) : null;
@@ -28,6 +30,7 @@
   }
 
   function readCache() {
+    if (isFresh) return null;
     try {
       const raw = sessionStorage.getItem(CACHE_KEY);
       if (!raw) return null;
@@ -40,6 +43,7 @@
   }
 
   function writeCache(data) {
+    if (isFresh) return;
     try {
       sessionStorage.setItem(CACHE_KEY, JSON.stringify({
         ts: Date.now(),
@@ -62,11 +66,12 @@
     }
 
     try {
+      const queryParam = isFresh ? `?fresh=1&t=${Date.now()}` : "";
       const [catRes, projRes, revRes, setRes] = await Promise.all([
-        fetchWithTimeout("/api/public/catalog", 3000),
-        fetchWithTimeout("/api/public/projects", 3000),
-        fetchWithTimeout("/api/public/reviews", 3000),
-        fetchWithTimeout("/api/public/settings", 3000)
+        fetchWithTimeout(`/api/public/catalog${queryParam}`, 3000),
+        fetchWithTimeout(`/api/public/projects${queryParam}`, 3000),
+        fetchWithTimeout(`/api/public/reviews${queryParam}`, 3000),
+        fetchWithTimeout(`/api/public/settings${queryParam}`, 3000)
       ]);
 
       if (catRes && catRes.ok && Array.isArray(catRes.items)) {
@@ -138,22 +143,35 @@
       return out;
     },
 
+    findDesign(slug) {
+      if (!slug) return null;
+      const cat = this.catalog();
+      for (const catKey in cat) {
+        const c = cat[catKey];
+        if (c && Array.isArray(c.items)) {
+          const found = c.items.find((it) => it.slug === slug);
+          if (found) return { item: found, category: c, categoryKey: catKey };
+        }
+      }
+      return null;
+    },
+
     projects() {
       if (_projects && _projects.length > 0) {
         return _projects;
       }
-      return window.SIGNAGE_PROJECTS || [];
+      return window.SIGNAGE_PROJECTS || window.WORK_PROJECTS || [];
     },
 
     reviews() {
       if (_reviews && _reviews.length > 0) {
         return _reviews;
       }
-      return window.SIGNAGE_REVIEWS || [];
+      return window.SIGNAGE_REVIEWS || window.REVIEWS || [];
     },
 
     settings() {
-      const base = Object.assign({}, window.SIGNAGE_CONFIG || {});
+      const base = Object.assign({}, window.SIGNAGE_CONFIG || window.SITE_CONFIG || {});
       if (_settings && typeof _settings === "object") {
         if (_settings.phone) {
           base.phone = _settings.phone;
@@ -177,12 +195,17 @@
   const SB = {
     async sendEnquiry(payload) {
       try {
-        const res = await fetch("/api/public/enquiry", {
+        const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+        const timer = controller ? setTimeout(() => controller.abort(), 1000) : null;
+        const opts = {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-          keepalive: true
-        });
+          keepalive: true,
+          signal: controller ? controller.signal : undefined
+        };
+        const res = await fetch("/api/public/enquiry", opts);
+        if (timer) clearTimeout(timer);
         return await res.json().catch(() => ({ ok: false }));
       } catch (err) {
         console.warn("SB.sendEnquiry error:", err);
@@ -255,6 +278,29 @@
     }
   };
 
+  // Delegated click handler to guarantee dynamic wa.me and tel: resolution at click time
+  if (typeof document !== "undefined") {
+    document.addEventListener("click", (e) => {
+      const a = e.target.closest("a");
+      if (!a) return;
+      const href = a.getAttribute("href") || "";
+      const cfg = SBData.settings();
+      if (href.includes("wa.me/")) {
+        const raw = cfg.whatsappRaw || (cfg.whatsapp ? String(cfg.whatsapp).replace(/\D/g, "") : "");
+        if (raw) {
+          try {
+            const u = new URL(href, window.location.origin);
+            const text = u.searchParams.get("text");
+            a.href = text ? `https://wa.me/${raw}?text=${encodeURIComponent(text)}` : `https://wa.me/${raw}`;
+          } catch (_) {}
+        }
+      } else if (href.startsWith("tel:")) {
+        const raw = cfg.phoneRaw || (cfg.phone ? String(cfg.phone).replace(/\D/g, "") : "");
+        if (raw) a.href = `tel:+${raw}`;
+      }
+    }, true);
+  }
+
   window.SBData = SBData;
   window.SB = SB;
 
@@ -262,4 +308,3 @@
     SB.applySettings();
   });
 })();
-
