@@ -1,0 +1,130 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/house-nameplates",
+      "destination": "/category.html"
+    },
+    {
+      "source": "/house%20nameplates",
+      "destination": "/category.html"
+    },
+    {
+      "source": "/home-nameplates",
+      "destination": "/category.html"
+    },
+    {
+      "source": "/home%20nameplates",
+      "destination": "/category.html"
+    },
+    {
+      "source": "/nameplates",
+      "destination": "/category.html"
+    },
+    {
+      "source": "/led-glow-signs",
+      "destination": "/category.html"
+    },
+    {
+      "source": "/led%20glow%20signs",
+      "destination": "/category.html"
+    },
+    {
+      "source": "/glow-signs",
+      "destination": "/category.html"
+    },
+    {
+      "source": "/3d-letter-signs",
+      "destination": "/category.html"
+    },
+    {
+      "source": "/3d%20letter%20signs",
+      "destination": "/category.html"
+    },
+    {
+      "source": "/3d-letters",
+      "destination": "/category.html"
+    },
+    {
+      "source": "/acrylic-office-boards",
+      "destination": "/category.html"
+    },
+    {
+      "source": "/acrylic%20office%20boards",
+      "destination": "/category.html"
+    },
+    {
+      "source": "/office-boards",
+      "destination": "/category.html"
+    },
+    {
+      "source": "/wall-branding",
+      "destination": "/category.html"
+    },
+    {
+      "source": "/wall%20branding",
+      "destination": "/category.html"
+    },
+    {
+      "source": "/design/:slug",
+      "destination": "/product.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/index?__path=sitemap"
+    },
+    {
+      "source": "/api/:path((?!index$).*)",
+      "destination": "/api/index?__path=:path"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/admin",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "same-origin"
+        }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "same-origin"
+        }
+      ]
+    }
+  ]
+}
